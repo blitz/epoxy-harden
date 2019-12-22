@@ -1,0 +1,39 @@
+{
+  "memory_map": [
+    {
+      "base_addr": 0,
+      "length": 654336,
+      "type": 1
+    },
+    {
+      "base_addr": 654336,
+      "length": 1024,
+      "type": 2
+    },
+    {
+      "base_addr": 983040,
+      "length": 65536,
+      "type": 2
+    },
+    {
+      "base_addr": 1048576,
+      "length": 133038080,
+      "type": 1
+    },
+    {
+      "base_addr": 134086656,
+      "length": 131072,
+      "type": 2
+    },
+    {
+      "base_addr": 4278173696,
+      "length": 16384,
+      "type": 2
+    },
+    {
+      "base_addr": 4294705152,
+      "length": 262144,
+      "type": 2
+    }
+  ]
+}

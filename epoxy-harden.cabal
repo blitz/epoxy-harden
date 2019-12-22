@@ -1,0 +1,49 @@
+name:                epoxy-harden
+version:             0.1.0.0
+-- synopsis:
+-- description:
+homepage:            https://github.com/blitzclone/epoxy-harden#readme
+license:             AGPL-3
+license-file:        LICENSE
+author:              Julian Stecklina
+maintainer:          js@alien8.de
+copyright:           Copyright (c) 2018 Julian Stecklina
+category:            Operating System
+build-type:          Simple
+cabal-version:       >=1.10
+extra-source-files:  README.md
+
+library
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+  ghc-options:         -fwarn-unused-imports
+  exposed-modules:     MachineDescription, X86, FrameAlloc, Interval, PhysMem, ElfWriter, EpoxyMain, AddressSpace,
+                       PageTable, EpoxyState, ApplicationDescription
+  build-depends:       base >= 4.7 && < 5,
+                       containers,
+                       bytestring,
+                       aeson,
+                       scientific,
+                       mtl,
+                       lens,
+                       binary,
+                       elf
+
+executable epoxy-harden
+  hs-source-dirs:      app
+  main-is:             Main.hs
+  default-language:    Haskell2010
+  ghc-options:         -fwarn-unused-imports
+  build-depends:       base >= 4.7 && < 5,
+                       bytestring,
+                       optparse-applicative,
+                       epoxy-harden
+
+test-suite epoxy-harden-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  other-modules:       PhysMemSpec, IntervalSpec
+  build-depends:       base, epoxy-harden, hspec, QuickCheck, quickcheck-instances, bytestring
+  ghc-options:         -fwarn-unused-imports
+  default-language:    Haskell2010
