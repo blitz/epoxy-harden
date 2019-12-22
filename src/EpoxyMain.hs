@@ -118,10 +118,10 @@ generateBootImage mDesc kernelElf processElfs =
   evalState (do
                 kernelAs <- loadKernelElf kernelElf
                 userAss <- mapM (loadUserElf kernelAs) processElfs
-                bootPt:userPts <- realizePageTables (map constructPageTable (kernelAs:userAss))
+                pts <- realizePageTables (map constructPageTable (kernelAs:userAss))
                 -- Patch boot page table pointer
-                patchPt kernelElf "BOOT_PAGE_TABLE_PTR" bootPt 0
-                zipWithM_ (patchPt kernelElf "USER_PAGE_TABLE_PTRS") userPts [0..]
+                patchPt kernelElf "BOOT_PAGE_TABLE_PTR" (head pts) 0
+                zipWithM_ (patchPt kernelElf "USER_PAGE_TABLE_PTRS") (tail pts) [0..]
                 -- Wrap our memory state into the boot image as ELF segments
                 bootElfFromMemory (fromIntegral (elfEntry kernelElf)) <$> gets _memory) initialEpoxy
   where initialEpoxy = Epoxy { _allocator = initialFreeMemory,
