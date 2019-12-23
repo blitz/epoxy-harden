@@ -49,3 +49,17 @@ statically generated.
 
 The tool will combine all of these inputs into a ready to run ELF
 binary, that we'll call the _target boot image_.
+
+## Developing
+
+This section contains information related to actually hacking on the code.
+
+### Updating Dependencies
+
+To update the [Stackage](https://www.stackage.org/) snapshot we build
+against, update the resolver in `stack.yaml`. Then execute:
+
+```sh
+% niv update
+% stack-to-nix --output . --stack-yaml stack.yaml
+```
