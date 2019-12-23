@@ -7,5 +7,6 @@ pkgs.mkShell {
     pkgs.niv
     pkgs.stack
     pkgs.haskell-nix.nix-tools
+    pkgs.stylish-haskell
   ];
 }
