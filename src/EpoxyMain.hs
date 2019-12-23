@@ -10,7 +10,6 @@ import qualified Data.ByteString.Lazy.Char8 as B8
 import           Data.Elf
 import           Data.List
 import           Data.Maybe
-import qualified Data.Set                   as Set
 import           Data.Word
 
 import           AddressSpace
@@ -53,17 +52,13 @@ writeAddressSpace = mapM_ writeChunk
         writeChunk (AddressSpaceChunk _ (Fixed _ _) _) = return ()
         writeChunk _ = error "Can only write preloaded ELFs"
 
--- XXX The virtual address is currently hardcoded.
-addLocalApicMapping :: AddressSpace -> AddressSpace
-addLocalApicMapping as = as ++ [AddressSpaceChunk 0xffffffffffffe (Fixed 0xFEE00 1) (Set.fromList [Read, Write])]
-
 loadKernelElf :: Elf -> State Epoxy AddressSpace
 loadKernelElf kernelElf = do
   gets _allocator
     >>= modify . set allocator . reserveLoadedElf kernelElf
   writeAddressSpace kernelAs
   return kernelAs
-  where kernelAs = addLocalApicMapping (toAddressSpace kernelElf noPermissions asPreloaded)
+  where kernelAs = toAddressSpace kernelElf noPermissions asPreloaded
 
 -- Allocate frames for a user ELF binary.
 allocateAddressSpace :: AddressSpace -> State Epoxy AddressSpace
