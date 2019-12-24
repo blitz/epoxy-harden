@@ -4,4 +4,4 @@ packages:
 - .
 
 extra-deps:
-- elf-0.29
+- elf-0.30

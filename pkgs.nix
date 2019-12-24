@@ -2,7 +2,7 @@
   extras = hackage:
     {
       packages = {
-        "elf" = (((hackage.elf)."0.29").revisions).default;
+        "elf" = (((hackage.elf)."0.30").revisions).default;
         epoxy-harden = ./epoxy-harden.nix;
         };
       };

@@ -5,12 +5,12 @@
 
 packages:
 - completed:
-    hackage: elf-0.29@sha256:24f8b6e1cd56e9a6a766ac8e453f2856f9ed9bfee5769a3e42fa723c599f5cfd,1344
+    hackage: elf-0.30@sha256:c43915ff7a88500e728655d7f3a27e4016cffd824fa8b996c4cc35600dd8279f,1375
     pantry-tree:
-      size: 649
-      sha256: f4018b587215eee969282b874350ad105324eba19dc30116b99409270685115a
+      size: 703
+      sha256: e091de0fb7c57fba3c2c47fb5505884ab8c2fdaa3f3a7c32b628a5dddd8453af
   original:
-    hackage: elf-0.29
+    hackage: elf-0.30
 snapshots:
 - completed:
     size: 524789
