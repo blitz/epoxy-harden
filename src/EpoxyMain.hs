@@ -38,15 +38,6 @@ toFreeFrames md =
 elfLoadSegments :: Elf -> [ElfSegment]
 elfLoadSegments elf =  [seg | seg <- elfSegments elf, elfSegmentType seg == PT_LOAD]
 
--- Remove the physical memory regions that a loaded ELF images occupies from an allocator.
-reserveLoadedElf :: Elf -> FrameIntervalSet -> FrameIntervalSet
-reserveLoadedElf elf = reserveFrameIntervals (map toPhysFrameInterval (elfLoadSegments elf))
-  where
-    toPhysFrameInterval :: ElfSegment -> FrameInterval
-    toPhysFrameInterval seg = byteToFrameInterval (fromSize
-                                                    (toInteger (elfSegmentPhysAddr seg))
-                                                    (toInteger (elfSegmentMemSize seg)))
-
 writeAddressSpace :: AddressSpace -> State Epoxy ()
 writeAddressSpace = mapM_ writeChunk
   where writeChunk (AddressSpaceChunk _ (Preloaded f s) _) = writeMemoryM (frameToPhys f) (BL.fromStrict s)
