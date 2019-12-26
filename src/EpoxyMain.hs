@@ -83,12 +83,12 @@ patchWord64 phys val =
   writeMemoryM phys (runPut (putWord64le val))
 
 -- TODO Hardcoded RISC-V Sv39 and no ASIDs
-ptToSATP :: Word64 -> Word64
-ptToSATP ptRoot = ptRoot .|. (shiftL 8 60)
+ptFrameToSATP :: Frame -> Word64
+ptFrameToSATP ptRoot = fromInteger ptRoot .|. shiftL 8 60
 
-patchPt :: Elf -> AddressSpace -> String -> Word64 -> Int -> State Epoxy ()
-patchPt elf as sym ptr idx =
-  patchWord64 (fromIntegral (fromIntegral idx * 8 + symPhys)) (fromIntegral ptr)
+patchPt :: Elf -> AddressSpace -> String -> Frame -> Int -> State Epoxy ()
+patchPt elf as sym ptFrame idx =
+  patchWord64 (fromIntegral (fromIntegral idx * 8 + symPhys)) (ptFrameToSATP ptFrame)
   where symPhys = fromJust $ lookupPhys as $ fromIntegral $ symbolToVirt sym elf
 
 generateBootImage :: MachineDescription -> Elf -> [Elf] -> B.ByteString

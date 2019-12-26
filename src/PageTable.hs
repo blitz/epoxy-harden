@@ -112,5 +112,7 @@ realizePageTable pt = do
           return result
 
 -- Realize a set of page tables and share as much of the page table structure as possible.
-realizePageTables :: [PageTable] -> State Epoxy [Word64]
-realizePageTables pts = evalStateT (mapM realizePageTable pts) []
+realizePageTables :: [PageTable] -> State Epoxy [Frame]
+realizePageTables pts = do
+  ptes <- evalStateT (mapM realizePageTable pts) []
+  return $ map R5.pteFrame ptes

@@ -6,6 +6,8 @@ import           Data.Set     (Set)
 import qualified Data.Set     as Set
 import           Data.Word
 
+import           FrameAlloc   (Frame)
+
 data PteProperty = Valid | Read | Write | Execute | User | Global | Accessed | Dirty
   deriving (Bounded, Enum, Eq, Ord)
 
@@ -29,9 +31,12 @@ toPteProps :: AS.PermissionSet -> PteProperties
 toPteProps = Set.map toPteProp
 
 makeLeafPte :: Word64 -> AS.PermissionSet -> Word64
-makeLeafPte physAddr perm = (shiftR physAddr 4) .|. (ptePropsToWord props)
+makeLeafPte physAddr perm = (shiftR physAddr 2) .|. (ptePropsToWord props)
   where props = Set.union (toPteProps perm) defaultProps
         defaultProps = Set.fromList [Valid, Accessed, Dirty]
 
 makeNonLeafPte :: Word64 -> Word64
-makeNonLeafPte physAddr = (shiftR physAddr 4) .|. (ptePropToWord Valid)
+makeNonLeafPte physAddr = (shiftR physAddr 2) .|. (ptePropToWord Valid)
+
+pteFrame :: Word64 -> Frame
+pteFrame f = fromIntegral $ shiftR f 10
