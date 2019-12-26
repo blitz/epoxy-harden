@@ -68,7 +68,7 @@ segmentData seg = zeroExtend (elfSegmentData seg) (toInteger (elfSegmentMemSize 
 
 toAddressSpace :: Elf -> PermissionSet -> AddressSpace
 toAddressSpace elf defaultPerm =
-  [toAddressSpaceChunk s | s <- elfSegments elf, elfSegmentType s == PT_LOAD]
+  [toAddressSpaceChunk s | s <- elfSegments elf, elfSegmentType s == PT_LOAD && elfSegmentMemSize s > 0]
   where
     toAddressSpaceChunk :: ElfSegment -> AddressSpaceChunk
     toAddressSpaceChunk seg
