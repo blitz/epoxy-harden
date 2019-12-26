@@ -31,6 +31,9 @@ pageSize = frameSize
 frameToPhys :: Frame -> Integer
 frameToPhys f = shiftL f frameOrder
 
+pageToVirt :: Page -> Integer
+pageToVirt = frameToPhys
+
 physToFrameDown :: Integer -> Frame
 physToFrameDown b = shiftR b frameOrder
 

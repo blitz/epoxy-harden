@@ -43,6 +43,11 @@ data AddressSpaceChunk = AddressSpaceChunk
 
 type AddressSpace = [AddressSpaceChunk]
 
+backingStoreFrame :: BackingStore -> Frame
+backingStoreFrame (Preloaded f _) = f
+backingStoreFrame (Fixed f _) = f
+backingStoreFrame _ = error "Cannot resolve physical address in unallocated space"
+
 backingStoreLength :: BackingStore -> Int
 backingStoreLength (Preloaded _ d) = B.length d
 backingStoreLength (Anywhere d)    = B.length d
@@ -79,3 +84,17 @@ toAddressSpace elf defaultPerm =
 -- Add kernel mappings to a user space address space.
 infuseKernel :: AddressSpace -> AddressSpace -> AddressSpace
 infuseKernel kernelAs userAs = kernelAs ++ userAs
+
+lookupPhysChunk :: AddressSpaceChunk -> Integer -> Maybe Integer
+lookupPhysChunk chunk virtAddr
+  | isInside (pageInterval chunk) page = Just $ (frameToPhys chunkFrame) + virtAddr - (pageToVirt page)
+  | otherwise = Nothing
+  where page = virtToPageDown virtAddr
+        chunkFrame = backingStoreFrame $ backingStore chunk
+
+-- Lookup a physical address from a virtual one.
+lookupPhys :: AddressSpace -> Integer -> Maybe Integer
+lookupPhys [] virtAddr = Nothing
+lookupPhys (head:rest) virtAddr = case lookupPhysChunk head virtAddr of
+  r@(Just _) -> r
+  Nothing    -> lookupPhys rest virtAddr
