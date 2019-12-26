@@ -56,7 +56,7 @@ allocateAddressSpace = mapM allocateChunk
 loadKernelElf :: Elf -> State Epoxy AddressSpace
 loadKernelElf kernelElf = do
   as <- allocateAddressSpace $ toAddressSpace kernelElf noPermissions
-  return $ writeAddressSpace as
+  writeAddressSpace as
   return as
 
 loadUserElf :: AddressSpace -> Elf -> State Epoxy AddressSpace
