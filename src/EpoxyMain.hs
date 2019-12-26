@@ -4,6 +4,7 @@ import           Control.Lens               as LS
 import           Control.Monad
 import           Control.Monad.State.Lazy
 import           Data.Binary.Put
+import           Data.Bits
 import qualified Data.ByteString            as B
 import qualified Data.ByteString.Lazy       as BL
 import qualified Data.ByteString.Lazy.Char8 as B8
@@ -80,43 +81,39 @@ getSymbolList elf = map simplify symbolsWithName
         symbolsWithName = filter hasName (concat (parseSymbolTables elf))
         hasName symbol = isJust (snd (steName symbol))
 
-elfVirtToPhys :: Word64 -> Elf -> Word64
-elfVirtToPhys v elf
-  | length matchingSegments /= 1 = error "Cannot find physical address"
-  | otherwise = elfSegmentPhysAddr match + v - elfSegmentVirtAddr match
-  where match = head matchingSegments
-        matchingSegments = filter segmentMatches (elfLoadSegments elf)
-        segmentMatches s = isInside (fromSize (elfSegmentVirtAddr s) (elfSegmentMemSize s)) v
-
-symbolToPhys :: String -> Elf -> Word64
-symbolToPhys name elf = case find hasName (getSymbolList elf) of
-  Just (_, vAddr) -> elfVirtToPhys vAddr elf
+symbolToVirt :: String -> Elf -> Word64
+symbolToVirt name elf = case find hasName (getSymbolList elf) of
+  Just (_, vAddr) -> vAddr
   _               -> error ("No symbol: " ++ show name)
   where hasName (n, _) = n == name
 
-patchWord32 :: Integer -> Word32 -> State Epoxy ()
-patchWord32 phys val =
-  writeMemoryM phys (runPut (putWord32le val))
+patchWord64 :: Integer -> Word64 -> State Epoxy ()
+patchWord64 phys val =
+  writeMemoryM phys (runPut (putWord64le val))
 
-patchPt :: Elf -> String -> Word64 -> Int -> State Epoxy ()
-patchPt kernelElf sym ptr idx
-  | symPhys <= fromIntegral (maxBound :: Word32) = patchWord32 (fromIntegral (fromIntegral idx * 4 + symPhys))
-                                                   (fromIntegral ptr)
-  | otherwise = error "Virtual address out of bounds"
-  where symPhys = symbolToPhys sym kernelElf
+-- TODO Hardcoded RISC-V Sv39 and no ASIDs
+ptToSATP :: Word64 -> Word64
+ptToSATP ptRoot = ptRoot .|. (shiftL 8 60)
+
+patchPt :: Elf -> AddressSpace -> String -> Word64 -> Int -> State Epoxy ()
+patchPt elf as sym ptr idx =
+  patchWord64 (fromIntegral (fromIntegral idx * 8 + symPhys)) (fromIntegral ptr)
+  where symPhys = fromJust $ lookupPhys as $ fromIntegral $ symbolToVirt sym elf
 
 generateBootImage :: MachineDescription -> Elf -> [Elf] -> B.ByteString
-generateBootImage mDesc kernelElf processElfs =
-  evalState (do
-                kernelAs <- loadKernelElf kernelElf
-                userAss <- mapM (loadUserElf kernelAs) processElfs
-                pts <- realizePageTables (map constructPageTable (kernelAs:userAss))
-                -- Patch boot page table pointer
-                patchPt kernelElf "BOOT_PAGE_TABLE_PTR" (head pts) 0
-                zipWithM_ (patchPt kernelElf "USER_PAGE_TABLE_PTRS") (tail pts) [0..]
-                -- Wrap our memory state into the boot image as ELF segments
-                bootElfFromMemory (fromIntegral (elfEntry kernelElf)) <$> gets _memory) initialEpoxy
-  where initialEpoxy = Epoxy { _allocator = initialFreeMemory,
-                               _memory = [] }
-        -- Reserve the lower MB to be friendly to boot loaders.
-        initialFreeMemory = reserveFrameInterval (Interval 0 0x100) (toFreeFrames mDesc)
+generateBootImage mDesc kernelElf processElfs = evalFromInitial $ do
+  kernelAs <- loadKernelElf kernelElf
+  userAss <- mapM (loadUserElf kernelAs) processElfs
+  pts <- realizePageTables (map constructPageTable (kernelAs:userAss))
+  -- Patch boot page table pointer
+  patchPt kernelElf kernelAs "BOOT_SATP" (head pts) 0
+  zipWithM_ (patchPt kernelElf kernelAs "USER_SATPS") (tail pts) [0..]
+  -- Wrap our memory state into the boot image as ELF segments
+  let maybePhysEntry = lookupPhys kernelAs $ fromIntegral $ elfEntry kernelElf
+  maybe (error "Invalid entry point into kernel")
+    (\x -> bootElfFromMemory (fromIntegral x) <$> gets _memory) maybePhysEntry
+  where
+    evalFromInitial m = evalState m initialEpoxy
+    initialEpoxy = Epoxy { _allocator = initialFreeMemory,
+                           _memory = [] }
+    initialFreeMemory = toFreeFrames mDesc
