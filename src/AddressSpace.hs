@@ -1,6 +1,5 @@
 module AddressSpace where
 
-import           Data.Bits
 import qualified Data.ByteString as B
 import           Data.Elf
 import           Data.Maybe
@@ -62,32 +61,21 @@ zeroExtend bytes len
 segmentData :: ElfSegment -> B.ByteString
 segmentData seg = zeroExtend (elfSegmentData seg) (toInteger (elfSegmentMemSize seg))
 
-asPreloaded :: Integer -> B.ByteString -> BackingStore
-asPreloaded = Preloaded
-
-asAnywhere  :: Integer -> B.ByteString -> BackingStore
-asAnywhere _ = Anywhere
-
-toAddressSpace :: Elf -> PermissionSet -> (Integer -> B.ByteString -> BackingStore) -> AddressSpace
-toAddressSpace elf defaultPerm bstoreConstructor =
+toAddressSpace :: Elf -> PermissionSet -> AddressSpace
+toAddressSpace elf defaultPerm =
   [toAddressSpaceChunk s | s <- elfSegments elf, elfSegmentType s == PT_LOAD]
   where
     toAddressSpaceChunk :: ElfSegment -> AddressSpaceChunk
     toAddressSpaceChunk seg
       | isPageAligned v && isPageAligned p = AddressSpaceChunk {
           virtStart = virtToPageDown v,
-          backingStore = bstoreConstructor (physToFrameDown p) (segmentData seg),
+          backingStore = Anywhere (segmentData seg),
           permissions = Set.union defaultPerm (fromElfSegmentFlags (elfSegmentFlags seg))}
       | otherwise = error "Segment is not page aligned"
       where
         v = toInteger (elfSegmentVirtAddr seg)
         p = toInteger (elfSegmentPhysAddr seg)
 
--- Remove all mappings that are in the user part of the address space.
-removeLowerMappings :: AddressSpace -> AddressSpace
-removeLowerMappings = filter isNotLower
-  where isNotLower c = not (intersects (pageInterval c) (fromSize 0 (shiftL 1 47)))
-
 -- Add kernel mappings to a user space address space.
 infuseKernel :: AddressSpace -> AddressSpace -> AddressSpace
-infuseKernel kernelAs userAs = removeLowerMappings kernelAs ++ userAs
+infuseKernel kernelAs userAs = kernelAs ++ userAs

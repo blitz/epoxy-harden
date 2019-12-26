@@ -52,15 +52,7 @@ writeAddressSpace = mapM_ writeChunk
         writeChunk (AddressSpaceChunk _ (Fixed _ _) _) = return ()
         writeChunk _ = error "Can only write preloaded ELFs"
 
-loadKernelElf :: Elf -> State Epoxy AddressSpace
-loadKernelElf kernelElf = do
-  gets _allocator
-    >>= modify . set allocator . reserveLoadedElf kernelElf
-  writeAddressSpace kernelAs
-  return kernelAs
-  where kernelAs = toAddressSpace kernelElf noPermissions asPreloaded
-
--- Allocate frames for a user ELF binary.
+-- Allocate frames for an ELF binary.
 allocateAddressSpace :: AddressSpace -> State Epoxy AddressSpace
 allocateAddressSpace = mapM allocateChunk
   where allocateChunk (AddressSpaceChunk v (Anywhere s) p) = do
@@ -69,12 +61,17 @@ allocateAddressSpace = mapM allocateChunk
           return (AddressSpaceChunk v (Preloaded frame s) p)
         allocateChunk c = return c
 
+loadKernelElf :: Elf -> State Epoxy AddressSpace
+loadKernelElf kernelElf = do
+  as <- allocateAddressSpace $ toAddressSpace kernelElf noPermissions
+  return $ writeAddressSpace as
+  return as
+
 loadUserElf :: AddressSpace -> Elf -> State Epoxy AddressSpace
 loadUserElf kernelAs userElf = do
-  as <- allocateAddressSpace userAs
+  as <- allocateAddressSpace $ toAddressSpace userElf userPermissions
   writeAddressSpace as
-  return (infuseKernel kernelAs as)
-  where userAs = toAddressSpace userElf userPermissions asAnywhere
+  return $ infuseKernel kernelAs as
 
 -- Return a simplified list of symbols. Only includes with names.
 getSymbolList :: Elf -> [(String, Word64)]
