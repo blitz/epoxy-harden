@@ -5,7 +5,7 @@ import           Data.Semigroup         ((<>))
 import           Options.Applicative
 
 import           ApplicationDescription
-import           EpoxyMain
+import           BootImage
 import           MachineDescription
 
 data BootImageArguments = BootImageArguments

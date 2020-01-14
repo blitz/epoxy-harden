@@ -1,4 +1,4 @@
-module EpoxyMain where
+module BootImage ( generateBootImage, parseElfFile ) where
 
 import           Control.Lens               as LS
 import           Control.Monad
