@@ -3,25 +3,47 @@ module Main where
 import qualified Data.ByteString        as B
 import           Data.Semigroup         ((<>))
 import           Options.Applicative
+import           System.FilePath.Posix
 
 import           ApplicationDescription
 import           BootImage
+import           CodeGen
 import           MachineDescription
 
 data BootImageArguments = BootImageArguments
-  { machineJsonFile     :: FilePath,
-    applicationJsonFile :: FilePath,
-    kernelTemplateFile  :: FilePath,
-    outputFile          :: FilePath }
+  { bootMachJsonFile   :: FilePath,
+    bootAppJsonFile    :: FilePath,
+    kernelTemplateFile :: FilePath,
+    outputBootImage    :: FilePath }
 
-doEpoxy :: BootImageArguments -> IO ()
-doEpoxy args = do
+data CodeGenArguments = CodeGenArguments
+  { codeGenMachJsonFile :: FilePath,
+    codeGenAppJsonFile  :: FilePath,
+    outHpp              :: FilePath,
+    outCpp              :: FilePath }
+
+data Command = BootImage BootImageArguments | CodeGen CodeGenArguments;
+
+doBootImage :: BootImageArguments -> IO ()
+doBootImage args = do
   elf <- parseElfFile (kernelTemplateFile args)
-  machineDesc <- parseMachineDescription (machineJsonFile args)
-  appDesc <-  parseApplicationDescription (applicationJsonFile args)
+  machineDesc <- parseMachineDescription $ bootMachJsonFile args
+  appDesc <-  parseApplicationDescription (bootAppJsonFile args)
   processes <- mapM (parseElfFile . binary) (processes appDesc)
-  B.writeFile (outputFile args) (generateBootImage machineDesc elf processes)
+  B.writeFile (outputBootImage args) (generateBootImage machineDesc elf processes)
   putStrLn "Done!"
+
+doCodeGen :: CodeGenArguments -> IO ()
+doCodeGen args = do
+  machineDesc <- parseMachineDescription (codeGenMachJsonFile args)
+  appDesc <-  parseApplicationDescription (codeGenAppJsonFile args)
+  let generated = generateCode machineDesc appDesc $ takeFileName $ outHpp args
+  writeFile (outCpp args) (cppContent generated)
+  writeFile (outHpp args) (hppContent generated)
+
+doEpoxy :: Command -> IO ()
+doEpoxy (BootImage args) = doBootImage args
+doEpoxy (CodeGen args)   = doCodeGen args
 
 bootImageParser :: Parser BootImageArguments
 bootImageParser = BootImageArguments
@@ -30,9 +52,19 @@ bootImageParser = BootImageArguments
   <*> strOption (long "kernel" <> metavar "KERNEL" <> help "The kernel ELF file")
   <*> strOption (long "output" <> short 'o' <> metavar "OUTPUT" <> help "The bootable output ELF file")
 
-cmdParser :: Parser BootImageArguments
+codegenParser :: Parser CodeGenArguments
+codegenParser = CodeGenArguments
+  <$> strOption (long "machine" <> metavar "MACHINE" <> help "The machine description JSON file")
+  <*> strOption (long "application" <> metavar "APPLICATION" <> help "The application description JSON file")
+  <*> strOption (long "out-hpp" <> metavar "HPP" <> help "The generated kernel state header file")
+  <*> strOption (long "out-cpp" <> metavar "CPP" <> help "The generated kernel state cpp file")
+
+cmdParser :: Parser Command
 cmdParser = subparser
-  (command "boot-image" (info (bootImageParser <**> helper) (progDesc "Build a bootable Epoxy system image")))
+  (command "boot-image" (info (BootImage <$> bootImageParser <**> helper)
+                         (progDesc "Build a bootable Epoxy system image")) <>
+   command "codegen" (info (CodeGen <$> codegenParser <**> helper)
+                       (progDesc "Generate kernel header and cpp files")))
 
 main :: IO ()
 main = doEpoxy =<< execParser opts

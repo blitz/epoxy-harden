@@ -18,7 +18,7 @@ library
   default-language:    Haskell2010
   ghc-options:         -fwarn-unused-imports
   exposed-modules:     MachineDescription, FrameAlloc, Interval, PhysMem, ElfWriter, BootImage, AddressSpace,
-                       PageTable, EpoxyState, ApplicationDescription, RiscV
+                       PageTable, EpoxyState, ApplicationDescription, RiscV, CodeGen
   build-depends:       base >= 4.7 && < 5,
                        containers,
                        bytestring,
@@ -37,6 +37,7 @@ executable epoxy-harden
   build-depends:       base >= 4.7 && < 5,
                        bytestring,
                        optparse-applicative,
+                       filepath,
                        epoxy-harden
 
 test-suite epoxy-harden-test
