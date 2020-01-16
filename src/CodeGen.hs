@@ -1,10 +1,13 @@
 module CodeGen (generateCode, GeneratedCode, hppContent, cppContent) where
 
+import           Data.Elf                    (elfEntry)
 import           Data.List
+import           Data.Word                   (Word64)
 import           Text.StringTemplate
 import           Text.StringTemplate.Classes
 
 import           ApplicationDescription
+import           ElfReader
 import           MachineDescription
 
 hppTemplate :: StringTemplate String
@@ -28,9 +31,9 @@ cppTemplate = newSTMP $ unlines [
   "#include \"$headerName$\"",
   "kobject kobjects[] { $kobjectInit; separator=\", \"$ };",
   "$capabilitySets$",
-  "process processes[$processCount$] { $processInit; separator=\", \"$ };"
-
-  -- TODO see source_template in the config python script and complete!
+  "process processes[$processCount$] { $processInit; separator=\", \"$ };",
+  "thread threads[$threadCount$] { $threadInit; separator=\", \"$ };",
+  ""
   ]
 
 data GeneratedCode = GeneratedCode
@@ -61,7 +64,7 @@ newtype ProcessInit = ProcessInit Process
 
 instance ToSElem ProcessInit where
   toSElem (ProcessInit p) = STR $ "{" ++ show (pid p) ++ ",{" ++ show (length (capabilities p))
-                                  ++ "," ++ capsetName p ++ "}";
+                                  ++ "," ++ capsetName p ++ "}}";
 
 sortByGid :: [KObject] -> [KObject]
 sortByGid = sortBy (\a b -> compare (gid a) (gid b))
@@ -69,16 +72,38 @@ sortByGid = sortBy (\a b -> compare (gid a) (gid b))
 isConsecutive :: [Int] -> Bool
 isConsecutive l = take (length l) [0..] == l
 
-generateCpp :: ApplicationDescription -> String -> String
-generateCpp app headerName =
-  if isConsecutive $ map gid sortedKobjs
-  then renderf cppTemplate ("headerName", headerName) ("kobjectInit", sortedKobjs)
-                           ("capabilitySets", map CapSet procs)
-                           ("processCount", length procs)
-                           ("processInit", map ProcessInit procs)
-  else error "Need consecutive kernel object GIDs"
+data ThreadInit = ThreadInit
+  { threadPid        :: Int,
+    threadEntryPoint :: Word64 };
+
+instance ToSElem ThreadInit where
+  toSElem ti = STR $ "{&processes[" ++ show (threadPid ti) ++ "], " ++ show (threadEntryPoint ti) ++ "ULL}"
+
+toThreadInit :: Process -> IO ThreadInit
+toThreadInit p = do
+  elf <- parseElfFile $ binary p
+  return $ ThreadInit (pid p) (elfEntry elf)
+
+toThreadInits :: ApplicationDescription -> IO [ThreadInit]
+toThreadInits app = mapM toThreadInit $ processes app
+
+generateCpp :: ApplicationDescription -> String -> IO String
+generateCpp app headerName = do
+  threadInit <- toThreadInits app
+  return $
+    if isConsecutive $ map gid sortedKobjs
+    then renderf cppTemplate ("headerName", headerName) ("kobjectInit", sortedKobjs)
+                             ("capabilitySets", map CapSet procs)
+                             ("processCount", length procs)
+                             ("processInit", map ProcessInit procs)
+                             ("threadCount", length procs)
+                             ("threadInit", threadInit)
+    else error "Need consecutive kernel object GIDs"
   where sortedKobjs = sortByGid (kobjects app)
         procs = processes app
 
-generateCode :: MachineDescription -> ApplicationDescription -> String -> GeneratedCode
-generateCode machine app headerName = GeneratedCode (generateHpp app) (generateCpp app headerName)
+generateCode :: MachineDescription -> ApplicationDescription -> String -> IO GeneratedCode
+generateCode machine app headerName = do
+  let hpp = generateHpp app
+  cpp <- generateCpp app headerName
+  return $ GeneratedCode hpp cpp

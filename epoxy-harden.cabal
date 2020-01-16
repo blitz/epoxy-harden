@@ -17,8 +17,8 @@ library
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -fwarn-unused-imports
-  exposed-modules:     MachineDescription, FrameAlloc, Interval, PhysMem, ElfWriter, BootImage, AddressSpace,
-                       PageTable, EpoxyState, ApplicationDescription, RiscV, CodeGen
+  exposed-modules:     MachineDescription, FrameAlloc, Interval, PhysMem, ElfReader, ElfWriter, BootImage,
+                       AddressSpace, PageTable, EpoxyState, ApplicationDescription, RiscV, CodeGen
   build-depends:       base >= 4.7 && < 5,
                        containers,
                        bytestring,

@@ -8,6 +8,7 @@ import           System.FilePath.Posix
 import           ApplicationDescription
 import           BootImage
 import           CodeGen
+import           ElfReader
 import           MachineDescription
 
 data BootImageArguments = BootImageArguments
@@ -28,16 +29,16 @@ doBootImage :: BootImageArguments -> IO ()
 doBootImage args = do
   elf <- parseElfFile (kernelTemplateFile args)
   machineDesc <- parseMachineDescription $ bootMachJsonFile args
-  appDesc <-  parseApplicationDescription (bootAppJsonFile args)
-  processes <- mapM (parseElfFile . binary) (processes appDesc)
+  appDesc     <- parseApplicationDescription (bootAppJsonFile args)
+  processes   <- mapM (parseElfFile . binary) (processes appDesc)
   B.writeFile (outputBootImage args) (generateBootImage machineDesc elf processes)
   putStrLn "Done!"
 
 doCodeGen :: CodeGenArguments -> IO ()
 doCodeGen args = do
   machineDesc <- parseMachineDescription (codeGenMachJsonFile args)
-  appDesc <-  parseApplicationDescription (codeGenAppJsonFile args)
-  let generated = generateCode machineDesc appDesc $ takeFileName $ outHpp args
+  appDesc     <- parseApplicationDescription (codeGenAppJsonFile args)
+  generated   <- generateCode machineDesc appDesc $ takeFileName $ outHpp args
   writeFile (outCpp args) (cppContent generated)
   writeFile (outHpp args) (hppContent generated)
 

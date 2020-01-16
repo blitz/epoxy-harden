@@ -1,6 +1,5 @@
-module BootImage ( generateBootImage, parseElfFile ) where
+module BootImage ( generateBootImage ) where
 
-import           Control.Lens               as LS
 import           Control.Monad
 import           Control.Monad.State.Lazy
 import           Data.Binary.Put
@@ -20,9 +19,6 @@ import           FrameAlloc
 import           Interval
 import           MachineDescription
 import           PageTable
-
-parseElfFile :: FilePath -> IO Elf
-parseElfFile path = B.readFile path <&> parseElf
 
 byteToFrameInterval :: ByteInterval -> FrameInterval
 byteToFrameInterval (Interval fromB toB) = Interval (physToFrameDown fromB) (physToFrameUp toB)
