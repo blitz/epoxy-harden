@@ -10,8 +10,9 @@ data KObject = KObject { gid      :: Int,
                          kobjType :: String }
   deriving (Show, Generic)
 
-data Process = Process { pid    :: Int,
-                         binary :: FilePath }
+data Process = Process { pid          :: Int,
+                         binary       :: FilePath,
+                         capabilities :: [Int] }
   deriving (Show, Generic)
 
 data ApplicationDescription = ApplicationDescription
