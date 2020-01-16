@@ -27,7 +27,8 @@ cppTemplate = newSTMP $ unlines [
   "// Automatically generated.",
   "#include \"$headerName$\"",
   "kobject kobjects[] { $kobjectInit; separator=\", \"$ };",
-  "$capabilitySets$"
+  "$capabilitySets$",
+  "process processes[$processCount$] { $processInit; separator=\", \"$ };"
 
   -- TODO see source_template in the config python script and complete!
   ]
@@ -56,6 +57,12 @@ instance ToSElem CapSet where
     where capList :: String
           capList = intercalate "," $ map show (capabilities p)
 
+newtype ProcessInit = ProcessInit Process
+
+instance ToSElem ProcessInit where
+  toSElem (ProcessInit p) = STR $ "{" ++ show (pid p) ++ ",{" ++ show (length (capabilities p))
+                                  ++ "," ++ capsetName p ++ "}";
+
 sortByGid :: [KObject] -> [KObject]
 sortByGid = sortBy (\a b -> compare (gid a) (gid b))
 
@@ -66,9 +73,12 @@ generateCpp :: ApplicationDescription -> String -> String
 generateCpp app headerName =
   if isConsecutive $ map gid sortedKobjs
   then renderf cppTemplate ("headerName", headerName) ("kobjectInit", sortedKobjs)
-                           ("capabilitySets", map CapSet (processes app))
+                           ("capabilitySets", map CapSet procs)
+                           ("processCount", length procs)
+                           ("processInit", map ProcessInit procs)
   else error "Need consecutive kernel object GIDs"
   where sortedKobjs = sortByGid (kobjects app)
+        procs = processes app
 
 generateCode :: MachineDescription -> ApplicationDescription -> String -> GeneratedCode
 generateCode machine app headerName = GeneratedCode (generateHpp app) (generateCpp app headerName)
