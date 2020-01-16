@@ -66,6 +66,7 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
           (hsPkgs."lens" or (buildDepError "lens"))
           (hsPkgs."binary" or (buildDepError "binary"))
           (hsPkgs."elf" or (buildDepError "elf"))
+          (hsPkgs."HStringTemplate" or (buildDepError "HStringTemplate"))
           ];
         buildable = true;
         };
@@ -75,6 +76,7 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
             (hsPkgs."base" or (buildDepError "base"))
             (hsPkgs."bytestring" or (buildDepError "bytestring"))
             (hsPkgs."optparse-applicative" or (buildDepError "optparse-applicative"))
+            (hsPkgs."filepath" or (buildDepError "filepath"))
             (hsPkgs."epoxy-harden" or (buildDepError "epoxy-harden"))
             ];
           buildable = true;

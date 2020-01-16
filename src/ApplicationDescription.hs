@@ -6,14 +6,21 @@ import qualified Data.ByteString.Lazy as B
 import           Data.Maybe
 import           GHC.Generics
 
+data KObject = KObject { gid      :: Int,
+                         kobjType :: String }
+  deriving (Show, Generic)
+
 data Process = Process { pid    :: Int,
                          binary :: FilePath }
   deriving (Show, Generic)
 
-newtype ApplicationDescription = ApplicationDescription { processes :: [Process] }
+data ApplicationDescription = ApplicationDescription
+  { kobjects  :: [KObject],
+    processes :: [Process] }
   deriving (Show, Generic)
 
 instance FromJSON Process
+instance FromJSON KObject
 instance FromJSON ApplicationDescription
 
 verify :: [Process] -> Bool

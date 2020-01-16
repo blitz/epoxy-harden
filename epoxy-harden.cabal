@@ -27,7 +27,8 @@ library
                        mtl,
                        lens,
                        binary,
-                       elf
+                       elf,
+                       HStringTemplate
 
 executable epoxy-harden
   hs-source-dirs:      app
