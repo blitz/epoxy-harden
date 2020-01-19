@@ -19,7 +19,6 @@ hppTemplate = newSTMP $ unlines [
   "#include \"process.hpp\"",
   "#include \"thread.hpp\"",
   "",
-  "extern kobject kobjects[$kobjectCount$];",
   "extern thread threads[$threadCount$];",
   "extern process processes[$processCount$];",
   ""
@@ -29,7 +28,7 @@ cppTemplate :: StringTemplate String
 cppTemplate = newSTMP $ unlines [
   "// Automatically generated.",
   "#include \"$headerName$\"",
-  "kobject kobjects[] { $kobjectInit; separator=\", \"$ };",
+  "$kobjectInit$",
   "$capabilitySets$",
   "process processes[$processCount$] { $processInit; separator=\", \"$ };",
   "thread threads[$threadCount$] { $threadInit; separator=\", \"$ };",
@@ -47,8 +46,17 @@ generateHpp app =
     processCount = length $ processes app
     kobjectCount = length $ kobjects app
 
+kobjectNameFromGid :: Int -> String
+kobjectNameFromGid g = "kobject_" ++ show g
+
+kobjectName :: KObject -> String
+kobjectName = kobjectNameFromGid . gid
+
+makePointer :: String -> String
+makePointer s = "&" ++ s
+
 instance ToSElem KObject where
-  toSElem kobj = STR $ "{kobject_type::" ++ kobjType kobj ++ "}"
+  toSElem kobj = STR $ "static " ++ kobjType kobj ++ "_kobject " ++ kobjectName kobj ++ ";"
 
 newtype CapSet = CapSet Process;
 
@@ -56,9 +64,9 @@ capsetName :: Process -> String
 capsetName p = "p" ++ (show (pid p)) ++ "_capability_set"
 
 instance ToSElem CapSet where
-  toSElem (CapSet p) = STR $ "static const kobj_id_t " ++ capsetName p ++ "[] = {" ++ capList ++ "};\n"
+  toSElem (CapSet p) = STR $ "static kobject * const " ++ capsetName p ++ "[] = {" ++ capList ++ "};\n"
     where capList :: String
-          capList = intercalate "," $ map show (capabilities p)
+          capList = intercalate "," $ map (makePointer . kobjectNameFromGid) (capabilities p)
 
 newtype ProcessInit = ProcessInit Process
 
@@ -92,7 +100,8 @@ generateCpp app headerName = do
   threadInit <- toThreadInits app
   return $
     if isConsecutive $ map gid sortedKobjs
-    then renderf cppTemplate ("headerName", headerName) ("kobjectInit", sortedKobjs)
+    then renderf cppTemplate ("headerName", headerName)
+                             ("kobjectInit", sortedKobjs)
                              ("capabilitySets", map CapSet procs)
                              ("processCount", length procs)
                              ("processInit", map ProcessInit procs)
