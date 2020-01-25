@@ -20,7 +20,6 @@ hppTemplate = newSTMP $ unlines [
   "#include \"thread.hpp\"",
   "",
   "extern thread threads[$threadCount$];",
-  "extern process processes[$processCount$];",
   ""
   ]
 
@@ -32,8 +31,8 @@ cppTemplate = newSTMP $ unlines [
   "$kobjectFwdDecl$",
   "$capabilitySets$",
   "$kobjectInit$",
-  "}",
   "process processes[$processCount$] { $processInit; separator=\", \"$ };",
+  "}",
   "thread threads[$threadCount$] { $threadInit; separator=\", \"$ };",
   ""
   ]
