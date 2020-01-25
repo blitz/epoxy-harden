@@ -28,8 +28,11 @@ cppTemplate :: StringTemplate String
 cppTemplate = newSTMP $ unlines [
   "// Automatically generated.",
   "#include \"$headerName$\"",
-  "$kobjectInit$",
+  "namespace {",
+  "$kobjectFwdDecl$",
   "$capabilitySets$",
+  "$kobjectInit$",
+  "}",
   "process processes[$processCount$] { $processInit; separator=\", \"$ };",
   "thread threads[$threadCount$] { $threadInit; separator=\", \"$ };",
   ""
@@ -56,7 +59,12 @@ makePointer :: String -> String
 makePointer s = "&" ++ s
 
 instance ToSElem KObject where
-  toSElem kobj = STR $ "static " ++ kobjType kobj ++ "_kobject " ++ kobjectName kobj ++ ";"
+  toSElem kobj = STR $ kobjType kobj ++ "_kobject " ++ kobjectName kobj ++ ";"
+
+newtype KObjectFwdDecl = KObjectFwdDecl KObject;
+
+instance ToSElem KObjectFwdDecl where
+  toSElem (KObjectFwdDecl kobj) = STR $ "extern " ++ kobjType kobj ++ "_kobject " ++ kobjectName kobj ++ ";"
 
 newtype CapSet = CapSet Process;
 
@@ -64,7 +72,7 @@ capsetName :: Process -> String
 capsetName p = "p" ++ (show (pid p)) ++ "_capability_set"
 
 instance ToSElem CapSet where
-  toSElem (CapSet p) = STR $ "static kobject * const " ++ capsetName p ++ "[] = {" ++ capList ++ "};\n"
+  toSElem (CapSet p) = STR $ "kobject * const " ++ capsetName p ++ "[] = {" ++ capList ++ "};\n"
     where capList :: String
           capList = intercalate "," $ map (makePointer . kobjectNameFromGid) (capabilities p)
 
@@ -101,6 +109,7 @@ generateCpp app headerName = do
   return $
     if isConsecutive $ map gid sortedKobjs
     then renderf cppTemplate ("headerName", headerName)
+                             ("kobjectFwdDecl", map KObjectFwdDecl sortedKobjs)
                              ("kobjectInit", sortedKobjs)
                              ("capabilitySets", map CapSet procs)
                              ("processCount", length procs)
