@@ -15,8 +15,6 @@ hppTemplate = newSTMP $ unlines [
   "// Automatically generated.",
   "#pragma once",
   "",
-  "#include \"config_types.hpp\"",
-  "#include \"process.hpp\"",
   "#include \"thread.hpp\"",
   "",
   "extern thread threads[$threadCount$];",
@@ -27,6 +25,9 @@ cppTemplate :: StringTemplate String
 cppTemplate = newSTMP $ unlines [
   "// Automatically generated.",
   "#include \"$headerName$\"",
+  "#include \"config_types.hpp\"",
+  "#include \"kobject_all.hpp\"",
+  "#include \"process.hpp\"",
   "namespace {",
   "$kobjectFwdDecl$",
   "$capabilitySets$",
