@@ -6,8 +6,8 @@ import qualified Data.ByteString.Lazy as B
 import           Data.Maybe
 import           GHC.Generics
 
-data KObject = KObject { gid      :: Int,
-                         kobjType :: String }
+data KObject = KObject { gid  :: Int,
+                         kind :: String }
   deriving (Show, Generic)
 
 data Process = Process { pid          :: Int,

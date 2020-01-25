@@ -48,11 +48,11 @@ kobjNameFromGid g = "kobject_" ++ show g
 kobjName :: KObject -> String
 kobjName = kobjNameFromGid . gid
 
-kobjFullType :: KObject -> CppType
-kobjFullType k = Type ((kobjType k) ++ "_kobject")
+kobjType :: KObject -> CppType
+kobjType k = Type (kind k ++ "_kobject")
 
 kobjFwdDecl :: KObject -> CppStatement
-kobjFwdDecl k = FwdVarDeclaration (kobjFullType k) (kobjName k)
+kobjFwdDecl k = FwdVarDeclaration (kobjType k) (kobjName k)
 
 kobjPointerFromGid :: Int -> CppExpression
 kobjPointerFromGid = AddressOf . Identifier . kobjNameFromGid
@@ -69,7 +69,7 @@ procName :: Process -> String
 procName p = "process_" ++ show (pid p)
 
 kobjDef :: KObject -> CppStatement
-kobjDef k = VarDefinition (kobjFullType k) (kobjName k) []
+kobjDef k = VarDefinition (kobjType k) (kobjName k) []
 
 procDef :: Process -> CppStatement
 procDef p = VarDefinition (Type "process") (procName p)
