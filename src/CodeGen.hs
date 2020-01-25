@@ -1,86 +1,40 @@
-module CodeGen (generateCode, GeneratedCode, hppContent, cppContent) where
+module CodeGen (generateCode, GeneratedCode, hppContent, cppContent,
+               ) where
 
-import           Data.Elf                    (elfEntry)
+import           Data.Elf               (elfEntry)
 import           Data.List
-import           Data.Word                   (Word64)
-import           Text.StringTemplate
-import           Text.StringTemplate.Classes
+import           Data.Word              (Word64)
 
 import           ApplicationDescription
+import           CppAst
 import           ElfReader
 import           MachineDescription
 
-hppTemplate :: StringTemplate String
-hppTemplate = newSTMP $ unlines [
-  "// Automatically generated.",
-  "#pragma once",
-  "",
-  "#include \"thread.hpp\"",
-  "",
-  "extern thread threads[$threadCount$];",
-  ""
-  ]
+-- exampleProgram :: CppProgram
+-- exampleProgram = [Include "state.hpp",
+--                    AnonNamespace [
+--                      FwdVarDeclaration (Type "exit_kobject") "kobject_0",
+--                      ArrayDefinition (Type "kobject_array") "p0_capability_set"
+--                      [AddressOf (Identifier "kobject_0")]
+--                      ],
+--                    VarDefinition (Type "thread_array") "threads" (InitializerList [])
+--                  ]
 
-cppTemplate :: StringTemplate String
-cppTemplate = newSTMP $ unlines [
-  "// Automatically generated.",
-  "#include \"$headerName$\"",
-  "#include \"config_types.hpp\"",
-  "#include \"kobject_all.hpp\"",
-  "#include \"process.hpp\"",
-  "namespace {",
-  "$kobjectFwdDecl$",
-  "$capabilitySets$",
-  "$kobjectInit$",
-  "process processes[$processCount$] { $processInit; separator=\", \"$ };",
-  "}",
-  "thread threads[$threadCount$] { $threadInit; separator=\", \"$ };",
-  ""
-  ]
+processEntry :: Process -> IO Word64
+processEntry p = do
+  elf <- parseElfFile $ binary p
+  return $ elfEntry elf
 
 data GeneratedCode = GeneratedCode
   { hppContent :: String,
     cppContent :: String }
 
-generateHpp :: ApplicationDescription -> String
+generateHpp :: ApplicationDescription -> CppProgram
 generateHpp app =
-  renderf hppTemplate ("kobjectCount", kobjectCount) ("processCount", processCount) ("threadCount", processCount)
-  where
-    processCount = length $ processes app
-    kobjectCount = length $ kobjects app
-
-kobjectNameFromGid :: Int -> String
-kobjectNameFromGid g = "kobject_" ++ show g
-
-kobjectName :: KObject -> String
-kobjectName = kobjectNameFromGid . gid
-
-makePointer :: String -> String
-makePointer s = "&" ++ s
-
-instance ToSElem KObject where
-  toSElem kobj = STR $ kobjType kobj ++ "_kobject " ++ kobjectName kobj ++ ";"
-
-newtype KObjectFwdDecl = KObjectFwdDecl KObject;
-
-instance ToSElem KObjectFwdDecl where
-  toSElem (KObjectFwdDecl kobj) = STR $ "extern " ++ kobjType kobj ++ "_kobject " ++ kobjectName kobj ++ ";"
-
-newtype CapSet = CapSet Process;
-
-capsetName :: Process -> String
-capsetName p = "p" ++ (show (pid p)) ++ "_capability_set"
-
-instance ToSElem CapSet where
-  toSElem (CapSet p) = STR $ "kobject * const " ++ capsetName p ++ "[] = {" ++ capList ++ "};\n"
-    where capList :: String
-          capList = intercalate "," $ map (makePointer . kobjectNameFromGid) (capabilities p)
-
-newtype ProcessInit = ProcessInit Process
-
-instance ToSElem ProcessInit where
-  toSElem (ProcessInit p) = STR $ "{" ++ show (pid p) ++ ",{" ++ show (length (capabilities p))
-                                  ++ "," ++ capsetName p ++ "}}";
+  [ Pragma "once"
+  , Include "thread.hpp"
+  , FwdArrayDeclaration (Type "thread") "threads" (Exactly $ length $ processes app)
+  ]
 
 sortByGid :: [KObject] -> [KObject]
 sortByGid = sortBy (\a b -> compare (gid a) (gid b))
@@ -88,40 +42,80 @@ sortByGid = sortBy (\a b -> compare (gid a) (gid b))
 isConsecutive :: [Int] -> Bool
 isConsecutive l = take (length l) [0..] == l
 
-data ThreadInit = ThreadInit
-  { threadPid        :: Int,
-    threadEntryPoint :: Word64 };
+kobjNameFromGid :: Int -> String
+kobjNameFromGid g = "kobject_" ++ show g
 
-instance ToSElem ThreadInit where
-  toSElem ti = STR $ "{&processes[" ++ show (threadPid ti) ++ "], " ++ show (threadEntryPoint ti) ++ "ULL}"
+kobjName :: KObject -> String
+kobjName = kobjNameFromGid . gid
 
-toThreadInit :: Process -> IO ThreadInit
-toThreadInit p = do
-  elf <- parseElfFile $ binary p
-  return $ ThreadInit (pid p) (elfEntry elf)
+kobjFullType :: KObject -> CppType
+kobjFullType k = Type ((kobjType k) ++ "_kobject")
 
-toThreadInits :: ApplicationDescription -> IO [ThreadInit]
-toThreadInits app = mapM toThreadInit $ processes app
+kobjFwdDecl :: KObject -> CppStatement
+kobjFwdDecl k = FwdVarDeclaration (kobjFullType k) (kobjName k)
 
-generateCpp :: ApplicationDescription -> String -> IO String
+kobjPointerFromGid :: Int -> CppExpression
+kobjPointerFromGid = AddressOf . Identifier . kobjNameFromGid
+
+capsetName :: Process -> String
+capsetName p = "p" ++ show (pid p) ++ "_capability_set"
+
+-- kobject * const p0_capability_set[] = {&kobject_0,&kobject_1};
+procCapSetDef :: Process -> CppStatement
+procCapSetDef p = ArrayDefinition kobjPointerType (capsetName p) (map kobjPointerFromGid $ capabilities p)
+  where kobjPointerType = Const $ Pointer $ Type "kobject"
+
+procName :: Process -> String
+procName p = "process_" ++ show (pid p)
+
+kobjDef :: KObject -> CppStatement
+kobjDef k = VarDefinition (kobjFullType k) (kobjName k) []
+
+procDef :: Process -> CppStatement
+procDef p = VarDefinition (Type "process") (procName p)
+            [ UnsignedInteger (fromIntegral (pid p))
+            , InitializerList
+              [ UnsignedInteger (fromIntegral (length (capabilities p)))
+              , Identifier (capsetName p)
+              ]]
+
+threadInitExprs :: Process -> IO CppExpression
+threadInitExprs p = do
+  entry <- processEntry p
+  return $ InitializerList [ AddressOf (Identifier (procName p))
+                           , UnsignedInteger entry]
+
+generateCpp :: ApplicationDescription -> String -> IO CppProgram
 generateCpp app headerName = do
-  threadInit <- toThreadInits app
+  threadInits <- mapM threadInitExprs procs
   return $
     if isConsecutive $ map gid sortedKobjs
-    then renderf cppTemplate ("headerName", headerName)
-                             ("kobjectFwdDecl", map KObjectFwdDecl sortedKobjs)
-                             ("kobjectInit", sortedKobjs)
-                             ("capabilitySets", map CapSet procs)
-                             ("processCount", length procs)
-                             ("processInit", map ProcessInit procs)
-                             ("threadCount", length procs)
-                             ("threadInit", threadInit)
+    then [ Include headerName
+         , Include "kobject_all.hpp"
+         , AnonNamespace
+           [
+             -- Forward declare all kernel objects, so they can refer
+             -- to pointers to themselves without caring about
+             -- initialization order.
+             CompoundStatement (map kobjFwdDecl sortedKobjs)
+
+             -- Define capability arrays for each process.
+           , CompoundStatement (map procCapSetDef procs)
+
+             -- Now construct all kernel objects.
+           , CompoundStatement (map kobjDef sortedKobjs)
+
+             -- Construct all processes.
+           , CompoundStatement (map procDef procs)
+           ]
+         , ArrayDefinition (Type "thread") "threads" threadInits
+         ]
     else error "Need consecutive kernel object GIDs"
   where sortedKobjs = sortByGid (kobjects app)
         procs = processes app
 
 generateCode :: MachineDescription -> ApplicationDescription -> String -> IO GeneratedCode
 generateCode machine app headerName = do
-  let hpp = generateHpp app
-  cpp <- generateCpp app headerName
+  let hpp = renderProgram $ generateHpp app
+  cpp <- renderProgram <$> generateCpp app headerName
   return $ GeneratedCode hpp cpp
