@@ -6,6 +6,6 @@
         epoxy-harden = ./epoxy-harden.nix;
         };
       };
-  resolver = "lts-14.20";
+  resolver = "lts-14.21";
   modules = [ ({ lib, ... }: { packages = {}; }) { packages = {}; } ];
   }
