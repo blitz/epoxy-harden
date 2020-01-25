@@ -85,6 +85,9 @@ threadInitExprs p = do
   return $ InitializerList [ AddressOf (Identifier (procName p))
                            , UnsignedInteger entry]
 
+statementMap :: (a -> CppStatement) -> [a] -> CppStatement
+statementMap f = CompoundStatement . map f
+
 generateCpp :: ApplicationDescription -> String -> IO CppProgram
 generateCpp app headerName = do
   threadInits <- mapM threadInitExprs procs
@@ -97,16 +100,16 @@ generateCpp app headerName = do
              -- Forward declare all kernel objects, so they can refer
              -- to pointers to themselves without caring about
              -- initialization order.
-             CompoundStatement (map kobjFwdDecl sortedKobjs)
+             statementMap kobjFwdDecl sortedKobjs
 
              -- Define capability arrays for each process.
-           , CompoundStatement (map procCapSetDef procs)
+           , statementMap procCapSetDef procs
 
              -- Now construct all kernel objects.
-           , CompoundStatement (map kobjDef sortedKobjs)
+           , statementMap kobjDef sortedKobjs
 
              -- Construct all processes.
-           , CompoundStatement (map procDef procs)
+           , statementMap procDef procs
            ]
          , ArrayDefinition (Type "thread") "threads" threadInits
          ]
