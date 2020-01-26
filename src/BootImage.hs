@@ -25,7 +25,7 @@ byteToFrameInterval (Interval fromB toB) = Interval (physToFrameDown fromB) (phy
 
 toFrameInterval :: MemoryMapEntry -> FrameInterval
 toFrameInterval e =
-  byteToFrameInterval (fromSize (baseAddr e) (memoryLength e))
+  byteToFrameInterval (fromSize (fromIntegral (baseAddress e)) (fromIntegral (memoryLength e)))
 
 toFreeFrames :: MachineDescription -> FrameIntervalSet
 toFreeFrames md =
