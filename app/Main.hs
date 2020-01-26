@@ -1,16 +1,15 @@
 module Main where
 
-import qualified Data.ByteString        as B
-import           Data.Semigroup         ((<>))
-import qualified Data.Text.IO           as T
+import qualified Data.ByteString       as B
+import           Data.Semigroup        ((<>))
+import qualified Data.Text.IO          as T
 import           Options.Applicative
 import           System.FilePath.Posix
 
 
-import           ApplicationDescription
 import           BootImage
 import           CodeGen
-import qualified DhallAppDescription    as DA
+import           DhallAppDescription
 import           ElfReader
 import           MachineDescription
 
@@ -33,14 +32,14 @@ doBootImage args = do
   elf <- parseElfFile (kernelTemplateFile args)
   machineDesc <- parseMachineDescription $ bootMachJsonFile args
   appDesc     <- parseApplicationDescription (bootAppJsonFile args)
-  processes   <- mapM (parseElfFile . binary) (processes appDesc)
+  processes   <- mapM (parseElfFile . processBinary) (processes appDesc)
   B.writeFile (outputBootImage args) (generateBootImage machineDesc elf processes)
   putStrLn "Done!"
 
 doCodeGen :: CodeGenArguments -> IO ()
 doCodeGen args = do
   machineDesc <- parseMachineDescription (codeGenMachJsonFile args)
-  appDesc     <- DA.parseApplicationDescription (codeGenAppDhallFile args)
+  appDesc     <- parseApplicationDescription (codeGenAppDhallFile args)
   generated   <- generateCode machineDesc appDesc $ takeFileName $ outHpp args
   T.writeFile (outCpp args) (cppContent generated)
   T.writeFile (outHpp args) (hppContent generated)

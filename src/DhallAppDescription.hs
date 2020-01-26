@@ -6,6 +6,7 @@ module DhallAppDescription where
 
 import           Data.List (sortBy)
 import           Data.Ord  (comparing)
+import qualified Data.Text as T
 import           Dhall
 
 data KObjectImpl = Exit
@@ -39,6 +40,10 @@ processPid _                            = error "not a process"
 processCaps :: KObject -> [Natural]
 processCaps KObject{impl=Process{capabilities=c}} = c
 processCaps _                                     = error "not a process"
+
+processBinary :: KObject -> String
+processBinary KObject{impl=Process{binary=b}} = T.unpack b
+processBinary _                               = error "not a process"
 
 kobjectKind :: KObject -> Text
 kobjectKind KObject{impl=Exit}      = "exit_kobject"
