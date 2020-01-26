@@ -14,4 +14,9 @@ let
 
   hsPkgs = pkgSet.config.hsPkgs;
 in
-hsPkgs.epoxy-harden.components.exes
+{
+  epoxyHarden = hsPkgs.epoxy-harden.components.exes.epoxy-harden;
+
+  # Export the matching version of dhall as well to avoid incompatiblities.
+  dhall = hsPkgs.dhall.components.exes.dhall;
+}
