@@ -1,71 +1,81 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module CppAst where
 
-import           Data.List (intercalate)
-import           Data.Word (Word64)
+import           Data.Text       (Text)
+import qualified Data.Text       as T
+import           Numeric.Natural (Natural)
 
 -- This is a sufficient subset of the C++ grammar to be able to
 -- express generated code.
 
-data CppType = Type String | Pointer CppType | Const CppType
+data CppType = Type Text | Pointer CppType | Const CppType
   deriving (Show)
 
-data CppExpression = Identifier String
-                   | UnsignedInteger Word64
+data CppExpression = Identifier Text
+                   | UnsignedInteger Natural
                    | AddressOf CppExpression
                    | InitializerList [CppExpression]
+                   | String Text
   deriving (Show)
 
 data ArrayLength = Exactly Int | Unspecified
   deriving (Show)
 
-data CppStatement = Include String
-                  | Pragma String
+data CppStatement = Include Text
+                  | Pragma Text
                   | CompoundStatement [CppStatement]
                   | AnonNamespace [CppStatement]
-                  | FwdVarDeclaration CppType String
-                  | FwdArrayDeclaration CppType String ArrayLength
-                  | VarDefinition CppType String [CppExpression]
-                  | ArrayDefinition CppType String [CppExpression]
+                  | FwdVarDeclaration CppType Text
+                  | FwdArrayDeclaration CppType Text ArrayLength
+                  | VarDefinition CppType Text [CppExpression]
+                  | ArrayDefinition CppType Text [CppExpression]
   deriving (Show)
 
 type CppProgram = [CppStatement]
 
+showT :: Show a => a -> Text
+showT = T.pack . show
+
 -- We don't have arrays here, because they are hard to render. Use
 -- using definitions to turn them into primitive types.
-renderType :: CppType -> String
+renderType :: CppType -> Text
 renderType (Type name)  = name
-renderType (Pointer ty) = renderType ty ++ " *"
-renderType (Const ty)   = renderType ty ++ " const"
+renderType (Pointer ty) = renderType ty `T.append` " *"
+renderType (Const ty)   = renderType ty `T.append` " const"
 
-renderExpression :: CppExpression -> String
+renderExpression :: CppExpression -> Text
 renderExpression (Identifier name) = name
-renderExpression (UnsignedInteger i) = show i
-renderExpression (AddressOf expr)  = "&(" ++ renderExpression expr ++ ")"
-renderExpression (InitializerList l) = "{" ++ intercalate "," (map renderExpression l) ++ "}"
+renderExpression (UnsignedInteger i) = showT i
+renderExpression (AddressOf expr)  = "&(" `T.append` renderExpression expr `T.append` ")"
+renderExpression (InitializerList l) = "{" `T.append` T.intercalate "," (map renderExpression l) `T.append` "}"
+renderExpression (String s) = T.concat ["\"", (T.replace "\"" "\\\"" s), "\""]
 
 -- Render the common part of a variable definition or declaration,
 -- e.g. int foo[].
-renderVar :: CppType -> String -> String
-renderVar ty name = renderType ty ++ " " ++ name
+renderVar :: CppType -> Text -> Text
+renderVar ty name = renderType ty `T.append` " " `T.append` name
 
-renderArrayLength :: ArrayLength -> String
-renderArrayLength (Exactly l) = "[" ++ show l ++ "]"
+renderArrayLength :: ArrayLength -> Text
+renderArrayLength (Exactly l) = "[" `T.append` showT l `T.append` "]"
 renderArrayLength Unspecified = "[]"
 
-renderStatement :: CppStatement -> String
-renderStatement (Include name)    = "#include \"" ++ name ++ "\""
-renderStatement (Pragma pragma)   = "#pragma " ++ pragma
-renderStatement (CompoundStatement l) = intercalate "\n" $ map renderStatement l
-renderStatement (AnonNamespace p) = "namespace {\n" ++ renderProgram p ++ "}"
-renderStatement (FwdVarDeclaration ty name) = "extern " ++ renderVar ty name ++ ";"
-renderStatement (FwdArrayDeclaration ty name l) = "extern " ++ renderVar ty name ++ renderArrayLength l ++ ";"
+renderStatement :: CppStatement -> Text
+renderStatement (Include name)    = "#include \"" `T.append` name `T.append` "\""
+renderStatement (Pragma pragma)   = "#pragma " `T.append` pragma
+renderStatement (CompoundStatement l) = T.intercalate "\n" $ map renderStatement l
+renderStatement (AnonNamespace p) = "namespace {\n" `T.append` renderProgram p `T.append` "}"
+renderStatement (FwdVarDeclaration ty name) = "extern " `T.append` renderVar ty name `T.append` ";"
+renderStatement (FwdArrayDeclaration ty name l) = "extern " `T.append` renderVar ty name
+  `T.append` renderArrayLength l `T.append` ";"
 renderStatement (VarDefinition ty name init) =
-  renderVar ty name ++ " " ++ renderExpression (InitializerList init) ++ ";"
-renderStatement (ArrayDefinition ty name init) = renderVar ty name ++ renderArrayLength (Exactly (length init)) ++ " "
-  ++ renderExpression (InitializerList init) ++ ";"
+  renderVar ty name `T.append` " " `T.append` renderExpression (InitializerList init) `T.append` ";"
+renderStatement (ArrayDefinition ty name init) = renderVar ty name
+  `T.append` renderArrayLength (Exactly (length init)) `T.append` " "
+  `T.append` renderExpression (InitializerList init) `T.append` ";"
 
-appendNewline :: String -> String
-appendNewline s = s ++ "\n"
+appendNewline :: Text -> Text
+appendNewline s = s `T.append` "\n"
 
-renderProgram :: CppProgram -> String
-renderProgram = concatMap $ appendNewline . renderStatement
+renderProgram :: CppProgram -> Text
+renderProgram p = T.concat $ map (appendNewline . renderStatement) p

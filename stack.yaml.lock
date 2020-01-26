@@ -11,6 +11,20 @@ packages:
       sha256: e091de0fb7c57fba3c2c47fb5505884ab8c2fdaa3f3a7c32b628a5dddd8453af
   original:
     hackage: elf-0.30
+- completed:
+    hackage: dhall-1.29.0@sha256:2bb41a7c354a155f6e62b61dfee7474b7bb8c3b474c689e56c6a1f7af37881b9,32058
+    pantry-tree:
+      size: 244291
+      sha256: 974a3764c28f7fe86fbd4117292ca4ba8da685e894656e683989fc4df0106d06
+  original:
+    hackage: dhall-1.29.0
+- completed:
+    hackage: prettyprinter-1.5.1@sha256:fca87c3e2611d3499a0341a59857e9b424a23f31646e4737d535a18582284f96,5375
+    pantry-tree:
+      size: 2106
+      sha256: 86fd583112db41bac5ac9ecf258ec402ad615253e9c5eabc56ec127bfb94c096
+  original:
+    hackage: prettyprinter-1.5.1
 snapshots:
 - completed:
     size: 524162

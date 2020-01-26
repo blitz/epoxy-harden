@@ -11,7 +11,7 @@ import           Dhall
 data KObjectImpl = Exit
                  | KLog { prefix :: Text }
                  | Process { pid :: Natural, binary :: Text, capabilities :: [Natural]}
-                 | Thread { parentPid :: Natural }
+                 | Thread { process :: Natural }
   deriving (Generic, FromDhall, Show)
 
 data KObject = KObject { gid :: Natural, impl :: KObjectImpl }
@@ -26,6 +26,11 @@ processes a = sortBy (comparing processPid) $ filter isProcess (kobjects a)
         isProcess _                       = False
         processPid KObject{impl=Process{pid=p}} = p
         processPid _                            = error "Not a process"
+
+threads :: ApplicationDescription -> [KObject]
+threads a = filter isThread (kobjects a)
+  where isThread KObject{impl=Thread{}} = True
+        isThread _                      = False
 
 processPid :: KObject -> Natural
 processPid KObject{impl=Process{pid=p}} = p

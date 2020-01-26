@@ -17,7 +17,8 @@ library
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -fwarn-unused-imports
-  exposed-modules:     MachineDescription,ElfReader, BootImage, ApplicationDescription, CodeGen
+  exposed-modules:     MachineDescription,ElfReader, BootImage, ApplicationDescription, CodeGen,
+                       DhallAppDescription
   other-modules:       EpoxyState, AddressSpace, PageTable, CppAst, RiscV, Interval, ElfWriter, FrameAlloc, PhysMem
   build-depends:       base >= 4.7 && < 5,
                        containers,
@@ -27,7 +28,9 @@ library
                        mtl,
                        lens,
                        binary,
-                       elf
+                       elf,
+                       dhall,
+                       text
 
 executable epoxy-harden
   hs-source-dirs:      app
@@ -38,7 +41,8 @@ executable epoxy-harden
                        bytestring,
                        optparse-applicative,
                        filepath,
-                       epoxy-harden
+                       epoxy-harden,
+                       text
 
 test-suite epoxy-harden-test
   type:                exitcode-stdio-1.0

@@ -1,33 +1,22 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module CodeGen (generateCode, GeneratedCode, hppContent, cppContent,
                ) where
 
-import           Data.Elf               (elfEntry)
+import           Data.Elf            (elfEntry)
 import           Data.List
-import           Data.Word              (Word64)
+import           Data.Text           (Text)
+import qualified Data.Text           as T
+import           Numeric.Natural     (Natural)
 
-import           ApplicationDescription
 import           CppAst
+import           DhallAppDescription
 import           ElfReader
 import           MachineDescription
 
--- exampleProgram :: CppProgram
--- exampleProgram = [Include "state.hpp",
---                    AnonNamespace [
---                      FwdVarDeclaration (Type "exit_kobject") "kobject_0",
---                      ArrayDefinition (Type "kobject_array") "p0_capability_set"
---                      [AddressOf (Identifier "kobject_0")]
---                      ],
---                    VarDefinition (Type "thread_array") "threads" (InitializerList [])
---                  ]
-
-processEntry :: Process -> IO Word64
-processEntry p = do
-  elf <- parseElfFile $ binary p
-  return $ elfEntry elf
-
 data GeneratedCode = GeneratedCode
-  { hppContent :: String,
-    cppContent :: String }
+  { hppContent :: Text,
+    cppContent :: Text }
 
 generateHpp :: ApplicationDescription -> CppProgram
 generateHpp app =
@@ -39,58 +28,64 @@ generateHpp app =
 sortByGid :: [KObject] -> [KObject]
 sortByGid = sortBy (\a b -> compare (gid a) (gid b))
 
-isConsecutive :: [Int] -> Bool
+isConsecutive :: [Natural] -> Bool
 isConsecutive l = take (length l) [0..] == l
 
-kobjNameFromGid :: Int -> String
-kobjNameFromGid g = "kobject_" ++ show g
+kobjNameFromGid :: Natural -> Text
+kobjNameFromGid g = "kobject_" `T.append` showT g
 
-kobjName :: KObject -> String
+kobjName :: KObject -> Text
 kobjName = kobjNameFromGid . gid
 
 kobjType :: KObject -> CppType
-kobjType k = Type (kind k ++ "_kobject")
+kobjType = Type . kobjectKind
 
 kobjFwdDecl :: KObject -> CppStatement
 kobjFwdDecl k = FwdVarDeclaration (kobjType k) (kobjName k)
 
-kobjPointerFromGid :: Int -> CppExpression
+kobjPointerFromGid :: Natural -> CppExpression
 kobjPointerFromGid = AddressOf . Identifier . kobjNameFromGid
 
-capsetName :: Process -> String
-capsetName p = "p" ++ show (pid p) ++ "_capability_set"
+capsetName :: KObjectImpl -> Text
+capsetName p = "p" `T.append` showT (pid p) `T.append` "_capability_set"
 
 -- kobject * const p0_capability_set[] = {&kobject_0,&kobject_1};
-procCapSetDef :: Process -> CppStatement
-procCapSetDef p = ArrayDefinition kobjPointerType (capsetName p) (map kobjPointerFromGid $ capabilities p)
+procCapSetDef :: KObject -> CppStatement
+procCapSetDef p = ArrayDefinition kobjPointerType (capsetName (impl p)) (map kobjPointerFromGid $ processCaps p)
   where kobjPointerType = Const $ Pointer $ Type "kobject"
 
-procName :: Process -> String
-procName p = "process_" ++ show (pid p)
+kobjInit :: [(Natural, Natural)] -> KObjectImpl -> [CppExpression]
+kobjInit _ Exit = []
+kobjInit _ KLog{prefix=p} = [String p]
+kobjInit _ pr@Process{pid=pid, capabilities=c} =
+  [ UnsignedInteger pid
+  , Identifier (capsetName pr)]
+kobjInit entryPoints Thread{process=gid} =
+  [ Identifier (kobjNameFromGid gid)
+  , UnsignedInteger $ lookupProcEntryPoint entryPoints gid]
 
-kobjDef :: KObject -> CppStatement
-kobjDef k = VarDefinition (kobjType k) (kobjName k) []
+kobjDef :: [(Natural, Natural)] -> KObject -> CppStatement
+kobjDef entryPoints k = VarDefinition (kobjType k) (kobjName k) (kobjInit entryPoints (impl k))
 
-procDef :: Process -> CppStatement
-procDef p = VarDefinition (Type "process") (procName p)
-            [ UnsignedInteger (fromIntegral (pid p))
-            , InitializerList
-              [ UnsignedInteger (fromIntegral (length (capabilities p)))
-              , Identifier (capsetName p)
-              ]]
+lookupProcEntryPoint :: [(Natural, Natural)] -> Natural -> Natural
+lookupProcEntryPoint entryPoints gid = snd $ head $ filter (\(g, _) -> g == gid) entryPoints
 
-threadInitExprs :: Process -> IO CppExpression
-threadInitExprs p = do
-  entry <- processEntry p
-  return $ InitializerList [ AddressOf (Identifier (procName p))
-                           , UnsignedInteger entry]
+procEntryPoint :: KObject -> IO (Natural, Natural)
+procEntryPoint KObject{gid=g, impl=Process{binary=b}} = do
+  elf <- parseElfFile $ T.unpack $ b
+  return (g, fromIntegral $ elfEntry $ elf)
+procEntryPoint _                                      = error "no process"
 
 statementMap :: (a -> CppStatement) -> [a] -> CppStatement
 statementMap f = CompoundStatement . map f
 
-generateCpp :: ApplicationDescription -> String -> IO CppProgram
+threadArray :: ApplicationDescription -> CppStatement
+threadArray a = ArrayDefinition (Const (Pointer (Type "thread"))) "threads" threadInit
+  where threadInit = map (AddressOf . Identifier . kobjName) (threads a)
+
+generateCpp :: ApplicationDescription -> Text -> IO CppProgram
 generateCpp app headerName = do
-  threadInits <- mapM threadInitExprs procs
+  entryPoints <- mapM procEntryPoint (processes app)
   return $
     if isConsecutive $ map gid sortedKobjs
     then [ Include headerName
@@ -106,12 +101,10 @@ generateCpp app headerName = do
            , statementMap procCapSetDef procs
 
              -- Now construct all kernel objects.
-           , statementMap kobjDef sortedKobjs
-
-             -- Construct all processes.
-           , statementMap procDef procs
+           , statementMap (kobjDef entryPoints) sortedKobjs
            ]
-         , ArrayDefinition (Type "thread") "threads" threadInits
+           -- The scheduler needs to see all threads.
+         , threadArray app
          ]
     else error "Need consecutive kernel object GIDs"
   where sortedKobjs = sortByGid (kobjects app)
@@ -120,5 +113,5 @@ generateCpp app headerName = do
 generateCode :: MachineDescription -> ApplicationDescription -> String -> IO GeneratedCode
 generateCode machine app headerName = do
   let hpp = renderProgram $ generateHpp app
-  cpp <- renderProgram <$> generateCpp app headerName
+  cpp <- renderProgram <$> generateCpp app (T.pack headerName)
   return $ GeneratedCode hpp cpp

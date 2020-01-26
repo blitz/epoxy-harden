@@ -2,12 +2,15 @@ module Main where
 
 import qualified Data.ByteString        as B
 import           Data.Semigroup         ((<>))
+import qualified Data.Text.IO           as T
 import           Options.Applicative
 import           System.FilePath.Posix
+
 
 import           ApplicationDescription
 import           BootImage
 import           CodeGen
+import qualified DhallAppDescription    as DA
 import           ElfReader
 import           MachineDescription
 
@@ -19,7 +22,7 @@ data BootImageArguments = BootImageArguments
 
 data CodeGenArguments = CodeGenArguments
   { codeGenMachJsonFile :: FilePath,
-    codeGenAppJsonFile  :: FilePath,
+    codeGenAppDhallFile :: FilePath,
     outHpp              :: FilePath,
     outCpp              :: FilePath }
 
@@ -37,10 +40,10 @@ doBootImage args = do
 doCodeGen :: CodeGenArguments -> IO ()
 doCodeGen args = do
   machineDesc <- parseMachineDescription (codeGenMachJsonFile args)
-  appDesc     <- parseApplicationDescription (codeGenAppJsonFile args)
+  appDesc     <- DA.parseApplicationDescription (codeGenAppDhallFile args)
   generated   <- generateCode machineDesc appDesc $ takeFileName $ outHpp args
-  writeFile (outCpp args) (cppContent generated)
-  writeFile (outHpp args) (hppContent generated)
+  T.writeFile (outCpp args) (cppContent generated)
+  T.writeFile (outHpp args) (hppContent generated)
 
 doEpoxy :: Command -> IO ()
 doEpoxy (BootImage args) = doBootImage args
@@ -56,7 +59,7 @@ bootImageParser = BootImageArguments
 codegenParser :: Parser CodeGenArguments
 codegenParser = CodeGenArguments
   <$> strOption (long "machine" <> metavar "MACHINE" <> help "The machine description JSON file")
-  <*> strOption (long "application" <> metavar "APPLICATION" <> help "The application description JSON file")
+  <*> strOption (long "application" <> metavar "APPLICATION" <> help "The application description DHALL file")
   <*> strOption (long "out-hpp" <> metavar "HPP" <> help "The generated kernel state header file")
   <*> strOption (long "out-cpp" <> metavar "CPP" <> help "The generated kernel state cpp file")
 
