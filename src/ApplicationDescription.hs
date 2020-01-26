@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module DhallAppDescription where
+module ApplicationDescription where
 
 import           Data.List (sortBy)
 import           Data.Ord  (comparing)

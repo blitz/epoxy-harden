@@ -1,21 +1,21 @@
 module Main where
 
-import qualified Data.ByteString       as B
-import           Data.Semigroup        ((<>))
-import qualified Data.Text.IO          as T
+import qualified Data.ByteString        as B
+import           Data.Semigroup         ((<>))
+import qualified Data.Text.IO           as T
 import           Options.Applicative
 import           System.FilePath.Posix
 
 
+import           ApplicationDescription
 import           BootImage
 import           CodeGen
-import           DhallAppDescription
 import           ElfReader
 import           MachineDescription
 
 data BootImageArguments = BootImageArguments
   { bootMachJsonFile   :: FilePath,
-    bootAppJsonFile    :: FilePath,
+    bootAppDhallFile   :: FilePath,
     kernelTemplateFile :: FilePath,
     outputBootImage    :: FilePath }
 
@@ -31,7 +31,7 @@ doBootImage :: BootImageArguments -> IO ()
 doBootImage args = do
   elf <- parseElfFile (kernelTemplateFile args)
   machineDesc <- parseMachineDescription $ bootMachJsonFile args
-  appDesc     <- parseApplicationDescription (bootAppJsonFile args)
+  appDesc     <- parseApplicationDescription (bootAppDhallFile args)
   processes   <- mapM (parseElfFile . processBinary) (processes appDesc)
   B.writeFile (outputBootImage args) (generateBootImage machineDesc elf processes)
   putStrLn "Done!"
@@ -51,7 +51,7 @@ doEpoxy (CodeGen args)   = doCodeGen args
 bootImageParser :: Parser BootImageArguments
 bootImageParser = BootImageArguments
   <$> strOption (long "machine" <> metavar "MACHINE" <> help "The machine description JSON file")
-  <*> strOption (long "application" <> metavar "APPLICATION" <> help "The application description JSON file")
+  <*> strOption (long "application" <> metavar "APPLICATION" <> help "The application description Dhall file")
   <*> strOption (long "kernel" <> metavar "KERNEL" <> help "The kernel ELF file")
   <*> strOption (long "output" <> short 'o' <> metavar "OUTPUT" <> help "The bootable output ELF file")
 

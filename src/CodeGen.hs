@@ -3,14 +3,14 @@
 module CodeGen (generateCode, GeneratedCode, hppContent, cppContent,
                ) where
 
-import           Data.Elf            (elfEntry)
+import           Data.Elf               (elfEntry)
 import           Data.List
-import           Data.Text           (Text)
-import qualified Data.Text           as T
-import           Numeric.Natural     (Natural)
+import           Data.Text              (Text)
+import qualified Data.Text              as T
+import           Numeric.Natural        (Natural)
 
+import           ApplicationDescription
 import           CppAst
-import           DhallAppDescription
 import           ElfReader
 import           MachineDescription
 
