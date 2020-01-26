@@ -22,7 +22,7 @@ generateHpp :: ApplicationDescription -> CppProgram
 generateHpp app =
   [ Pragma "once"
   , Include "thread.hpp"
-  , FwdArrayDeclaration (Type "thread") "threads" (Exactly $ length $ processes app)
+  , FwdArrayDeclaration (Const (Pointer (Type "thread"))) "threads" (Exactly $ length $ processes app)
   ]
 
 sortByGid :: [KObject] -> [KObject]
@@ -61,7 +61,7 @@ kobjInit _ pr@Process{pid=pid, capabilities=c} =
   [ UnsignedInteger pid
   , Identifier (capsetName pr)]
 kobjInit entryPoints Thread{process=gid} =
-  [ Identifier (kobjNameFromGid gid)
+  [ AddressOf $ Identifier (kobjNameFromGid gid)
   , UnsignedInteger $ lookupProcEntryPoint entryPoints gid]
 
 kobjDef :: [(Natural, Natural)] -> KObject -> CppStatement
@@ -79,8 +79,8 @@ procEntryPoint _                                      = error "no process"
 statementMap :: (a -> CppStatement) -> [a] -> CppStatement
 statementMap f = CompoundStatement . map f
 
-threadArray :: ApplicationDescription -> CppStatement
-threadArray a = ArrayDefinition (Const (Pointer (Type "thread"))) "threads" threadInit
+threadPtrArray :: ApplicationDescription -> CppStatement
+threadPtrArray a = ArrayDefinition (Const (Pointer (Type "thread"))) "threads" threadInit
   where threadInit = map (AddressOf . Identifier . kobjName) (threads a)
 
 generateCpp :: ApplicationDescription -> Text -> IO CppProgram
@@ -104,7 +104,7 @@ generateCpp app headerName = do
            , statementMap (kobjDef entryPoints) sortedKobjs
            ]
            -- The scheduler needs to see all threads.
-         , threadArray app
+         , threadPtrArray app
          ]
     else error "Need consecutive kernel object GIDs"
   where sortedKobjs = sortByGid (kobjects app)
