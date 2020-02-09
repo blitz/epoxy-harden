@@ -1,18 +1,43 @@
 # Epoxy
 
+[![stability-experimental](https://img.shields.io/badge/stability-experimental-orange.svg)](https://github.com/emersion/stability-badges#experimental)
+![GitHub](https://img.shields.io/github/license/blitz/epoxy-harden.svg)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/blitz/epoxy-harden)
+
 Epoxy is my private hobby experiment in designing a
 as-static-as-possible separation kernel that still supports highly
 configurable workloads. This repository contains the part that takes
 compiled binaries and creates a boot image for a particular system out
 of it.
 
-The actual kernel and userspace binaries are not public yet (and there
-is not a lot to see yet anyway).
+The actual kernel and userspace binaries for RISC-V can be found at
+the [Epoxy RISC-V](https://github.com/blitz/epoxy-riscv/) repository.
 
-## Building
+## Building using stack
 
-TODO:
-Describe building using stack.
+Using the Haskell [Stack](https://haskellstack.org/), you can build
+this program and execute its tests via:
+
+```sh
+% stack build
+% stack test
+```
+
+## Building using Nix
+
+If you don't plan to do any development, the most convenient way to
+build is to use [Nix](https://nixos.org/nix/):
+
+```sh
+% nix build -f . epoxyHarden
+```
+
+To speed up build times, you can use my [Cachix](https://cachix.org)
+cache:
+
+```sh
+% cachix use blitz
+```
 
 ## Overview
 
