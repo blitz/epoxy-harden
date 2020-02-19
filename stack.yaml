@@ -1,11 +1,11 @@
-resolver: lts-14.24
+resolver: lts-14.27
 
 packages:
 - .
 
 extra-deps:
 - elf-0.30
-- dhall-1.29.0
+- dhall-1.30.0
 - prettyprinter-1.5.1
 
 nix:

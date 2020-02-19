@@ -12,12 +12,12 @@ packages:
   original:
     hackage: elf-0.30
 - completed:
-    hackage: dhall-1.29.0@sha256:2bb41a7c354a155f6e62b61dfee7474b7bb8c3b474c689e56c6a1f7af37881b9,32058
+    hackage: dhall-1.30.0@sha256:38d6c37fda7fc5d32bd90cd6172efe25a4eb7c9949c0ce015a4be500c7825fdd,32875
     pantry-tree:
-      size: 244291
-      sha256: 974a3764c28f7fe86fbd4117292ca4ba8da685e894656e683989fc4df0106d06
+      size: 248056
+      sha256: 04ab967ef886c3cbf95cef574d8e906a81be3cb56ca192921ea280aaf1fa0f42
   original:
-    hackage: dhall-1.29.0
+    hackage: dhall-1.30.0
 - completed:
     hackage: prettyprinter-1.5.1@sha256:fca87c3e2611d3499a0341a59857e9b424a23f31646e4737d535a18582284f96,5375
     pantry-tree:
@@ -27,7 +27,7 @@ packages:
     hackage: prettyprinter-1.5.1
 snapshots:
 - completed:
-    size: 524162
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/14/21.yaml
-    sha256: 9a55dd75853718f2bbbe951872b36a3b7802fcd71796e0f25b8664f24e34c666
-  original: lts-14.21
+    size: 524996
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/14/27.yaml
+    sha256: 7ea31a280c56bf36ff591a7397cc384d0dff622e7f9e4225b47d8980f019a0f0
+  original: lts-14.27

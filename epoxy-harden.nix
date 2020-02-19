@@ -60,7 +60,6 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
           (hsPkgs."base" or (buildDepError "base"))
           (hsPkgs."containers" or (buildDepError "containers"))
           (hsPkgs."bytestring" or (buildDepError "bytestring"))
-          (hsPkgs."aeson" or (buildDepError "aeson"))
           (hsPkgs."scientific" or (buildDepError "scientific"))
           (hsPkgs."mtl" or (buildDepError "mtl"))
           (hsPkgs."lens" or (buildDepError "lens"))
