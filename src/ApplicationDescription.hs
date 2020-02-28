@@ -11,6 +11,8 @@ import qualified Data.Text       as T
 import           Dhall
 import           ElfReader
 
+-- TODO SharedMemory regions are missing configurable permissions. It
+-- should be possible to have read-only mappings.
 data GenericAddressSpaceDescElem elf = ELF
     { binary :: elf
     }
@@ -22,7 +24,8 @@ data GenericAddressSpaceDescElem elf = ELF
 
 instance FromDhall elf => FromDhall (GenericAddressSpaceDescElem elf)
 
-type AddressSpaceDesc = [GenericAddressSpaceDescElem Elf]
+type AddressSpaceDescElem = GenericAddressSpaceDescElem Elf
+type AddressSpaceDesc = [AddressSpaceDescElem]
 
 -- The appliation description is generic for different kernel object
 -- reference types, because we get it first with textual references

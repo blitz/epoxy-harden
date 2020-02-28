@@ -3,7 +3,6 @@ module BootImage ( generateBootImage ) where
 import           Control.Monad
 import           Control.Monad.State.Lazy
 import           Data.Binary.Put
-import           Data.Bits
 import qualified Data.ByteString            as B
 import qualified Data.ByteString.Lazy       as BL
 import qualified Data.ByteString.Lazy.Char8 as B8
@@ -11,6 +10,7 @@ import           Data.Elf
 import           Data.List
 import           Data.Maybe
 import           Data.Word
+import           Dhall                      (Natural)
 
 import           AddressSpace
 import           ApplicationDescription
@@ -20,6 +20,7 @@ import           FrameAlloc
 import           Interval
 import           MachineDescription
 import           PageTable
+import           RiscV
 
 byteToFrameInterval :: ByteInterval -> FrameInterval
 byteToFrameInterval (Interval fromB toB) = Interval (physToFrameDown fromB) (physToFrameUp toB)
@@ -35,13 +36,15 @@ toFreeFrames md =
 elfLoadSegments :: Elf -> [ElfSegment]
 elfLoadSegments elf =  [seg | seg <- elfSegments elf, elfSegmentType seg == PT_LOAD]
 
+-- Writes each frame with backing store into memory.
 writeAddressSpace :: AddressSpace -> State Epoxy ()
 writeAddressSpace = mapM_ writeChunk
   where writeChunk (AddressSpaceChunk _ (Preloaded f s) _) = writeMemoryM (frameToPhys f) (BL.fromStrict s)
         writeChunk (AddressSpaceChunk _ (Fixed _ _) _) = return ()
-        writeChunk _ = error "Can only write preloaded ELFs"
+        writeChunk _ = error "Can only write allocated ELFs"
 
--- Allocate frames for an ELF binary.
+-- Allocate frames for an ELF binary. This will find a place in memory
+-- for Anywhere frames. This function is idempotent.
 allocateAddressSpace :: AddressSpace -> State Epoxy AddressSpace
 allocateAddressSpace = mapM allocateChunk
   where allocateChunk (AddressSpaceChunk v (Anywhere s) p) = do
@@ -50,17 +53,16 @@ allocateAddressSpace = mapM allocateChunk
           return (AddressSpaceChunk v (Preloaded frame s) p)
         allocateChunk c = return c
 
-loadKernelElf :: Elf -> State Epoxy AddressSpace
-loadKernelElf kernelElf = do
-  as <- allocateAddressSpace $ elfToAddressSpace kernelElf noPermissions
-  writeAddressSpace as
-  return as
+-- Allocates and writes back an address space.
+realizeAddressSpace :: AddressSpace -> State Epoxy AddressSpace
+realizeAddressSpace as = do
+  allocatedAs <- allocateAddressSpace as
+  writeAddressSpace allocatedAs
+  return allocatedAs
 
-loadUserElf :: AddressSpace -> Elf -> State Epoxy AddressSpace
-loadUserElf kernelAs userElf = do
-  as <- allocateAddressSpace $ elfToAddressSpace userElf userPermissions
-  writeAddressSpace as
-  return $ infuseKernel kernelAs as
+-- Loads and allocates the address space for the kernel.
+loadKernelElf :: Elf -> State Epoxy AddressSpace
+loadKernelElf kernelElf = allocateAddressSpace $ elfToAddressSpace kernelElf noPermissions
 
 -- Return a simplified list of symbols. Only includes with names.
 getSymbolList :: Elf -> [(String, Word64)]
@@ -79,23 +81,35 @@ patchWord64 :: Integer -> Word64 -> State Epoxy ()
 patchWord64 phys val =
   writeMemoryM phys (runPut (putWord64le val))
 
--- TODO Hardcoded RISC-V Sv39 and no ASIDs
-ptFrameToSATP :: Frame -> Word64
-ptFrameToSATP ptRoot = fromInteger ptRoot .|. shiftL 8 60
-
 patchPt :: Elf -> AddressSpace -> String -> Frame -> Int -> State Epoxy ()
 patchPt elf as sym ptFrame idx =
-  patchWord64 (fromIntegral (fromIntegral idx * 8 + symPhys)) (ptFrameToSATP ptFrame)
+  patchWord64 (fromIntegral (fromIntegral idx * 8 + symPhys)) (pteFrameToSATP ptFrame)
   where symPhys = fromJust $ lookupPhys as $ fromIntegral $ symbolToVirt sym elf
+
+mmapToAsChunk :: Natural -> MemoryMapEntry -> PermissionSet -> AddressSpaceChunk
+mmapToAsChunk v (MemoryMapEntry base len _) = AddressSpaceChunk
+  (virtToPageDown $ fromIntegral v)
+  (Fixed
+    (physToFrameDown $ fromIntegral base)
+    (fromIntegral $ physToFrameUp $ fromIntegral len))
+
+-- Creates complete address spaces from a address space description.
+descToAddressSpace :: MachineDescription -> AddressSpace -> AddressSpaceDesc -> AddressSpace
+descToAddressSpace mDesc kernelAs asDesc = infuseKernel kernelAs $ concatMap createAs asDesc
+  where
+    createAs :: AddressSpaceDescElem -> AddressSpace
+    createAs ELF{binary=b} = elfToAddressSpace b userPermissions
+    createAs SharedMemory{ApplicationDescription.key=k, vaDestination=v}
+      | isPageAligned (fromIntegral v) = case maybeMem of
+                                           Just m -> [mmapToAsChunk v m rwuPermissions]
+                                           _ -> error "Failed to find shared memory region"
+      | otherwise = error "Shared memory region is not page aligned"
+      where maybeMem = findMemoryWithKey mDesc k
 
 generateBootImage :: MachineDescription -> Elf -> ApplicationDescription -> B.ByteString
 generateBootImage mDesc kernelElf appDesc = evalFromInitial $ do
-  -- XXX This is incomplete, because we ignore everything else in the
-  -- address spaces except the first ELF.
-  let processElfs = map processBinary (processes appDesc)
-
   kernelAs <- loadKernelElf kernelElf
-  userAss <- mapM (loadUserElf kernelAs) processElfs
+  userAss <- mapM (loadUserAs kernelAs) $ processes appDesc
   pts <- realizePageTables (map constructPageTable (kernelAs:userAss))
   -- Patch boot page table pointer
   patchPt kernelElf kernelAs "BOOT_SATP" (head pts) 0
@@ -105,6 +119,7 @@ generateBootImage mDesc kernelElf appDesc = evalFromInitial $ do
   maybe (error "Invalid entry point into kernel")
     (\x -> bootElfFromMemory (fromIntegral x) <$> gets _memory) maybePhysEntry
   where
+    loadUserAs kernelAs = realizeAddressSpace . descToAddressSpace mDesc kernelAs . processAddressSpace
     evalFromInitial m = evalState m initialEpoxy
     initialEpoxy = Epoxy { _allocator = initialFreeMemory,
                            _memory = [] }

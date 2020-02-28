@@ -24,6 +24,9 @@ noPermissions = Set.empty
 userPermissions :: PermissionSet
 userPermissions = Set.fromList [User]
 
+rwuPermissions :: PermissionSet
+rwuPermissions = Set.fromList [Read, Write, User]
+
 elfSegmentFlagToPermission :: ElfSegmentFlag -> Maybe Permission
 elfSegmentFlagToPermission sflag =
   case sflag of
