@@ -4,12 +4,12 @@
 
 module ApplicationDescription where
 
-import           Data.Functor    ((<&>))
 import           Data.List       (sortOn)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set        as Set
 import qualified Data.Text       as T
 import           Dhall
+import           ElfReader
 
 data GenericAddressSpaceDescElem elf = ELF
     { binary :: elf
@@ -22,7 +22,7 @@ data GenericAddressSpaceDescElem elf = ELF
 
 instance FromDhall elf => FromDhall (GenericAddressSpaceDescElem elf)
 
-type AddressSpaceDesc = [GenericAddressSpaceDescElem Text]
+type AddressSpaceDesc = [GenericAddressSpaceDescElem Elf]
 
 -- The appliation description is generic for different kernel object
 -- reference types, because we get it first with textual references
@@ -106,9 +106,9 @@ type InputKObject = GenericKObject Text Text
 type InputApplicationDescription = GenericApplicationDescription Text Text
 
 -- Types as we use them later in this program
-type KObjectImpl = GenericKObjectImpl Natural Text
-type KObject = GenericKObject Natural Text
-type ApplicationDescription = GenericApplicationDescription Natural Text
+type KObjectImpl = GenericKObjectImpl Natural Elf
+type KObject = GenericKObject Natural Elf
+type ApplicationDescription = GenericApplicationDescription Natural Elf
 
 -- Conversion from input application config to the internal
 -- representation. We replace textual IDs by sequential integers.
@@ -121,9 +121,10 @@ type GidMap = Map.Map Text Natural
 gidNameToNaturalMappings :: InputApplicationDescription -> GidMap
 gidNameToNaturalMappings a = Map.fromList $ zip (allGids a) [0..]
 
-normalizeAppDesc :: InputApplicationDescription -> ApplicationDescription
-normalizeAppDesc a = asRefMap ((Map.!) gidMap) a
+normalizeAppDesc :: InputApplicationDescription -> IO ApplicationDescription
+normalizeAppDesc a = asElfMapM (parseElfFile . T.unpack) globalGidAppDesc
   where
+    globalGidAppDesc = asRefMap ((Map.!) gidMap) a
     gidMap = gidNameToNaturalMappings a
 
 isValidAppDesc :: InputApplicationDescription -> Bool
@@ -152,7 +153,7 @@ processCaps :: KObject -> [Natural]
 processCaps KObject{impl=Process{capabilities=c}} = c
 processCaps _                                     = error "not a process"
 
-processAddressSpace :: KObject -> [GenericAddressSpaceDescElem Text]
+processAddressSpace :: KObject -> AddressSpaceDesc
 processAddressSpace KObject{impl=Process{addressSpace=a}} = a
 processAddressSpace _                                     = error "not a process"
 
@@ -161,8 +162,8 @@ addressSpaceDescBinary (ELF{binary=b}:_) = b
 addressSpaceDescBinary (_:rest)          = addressSpaceDescBinary rest
 addressSpaceDescBinary []                = error "Address space has no ELF"
 
-processBinary :: KObject -> String
-processBinary = T.unpack . addressSpaceDescBinary . processAddressSpace
+processBinary :: KObject -> Elf
+processBinary = addressSpaceDescBinary . processAddressSpace
 
 kobjectKind :: KObject -> Text
 kobjectKind KObject{impl=Exit}      = "exit_kobject"
@@ -171,4 +172,6 @@ kobjectKind KObject{impl=Process{}} = "process"
 kobjectKind KObject{impl=Thread{}}  = "thread"
 
 parseApplicationDescription :: FilePath -> IO ApplicationDescription
-parseApplicationDescription f = inputFile auto f <&> normalizeAppDesc
+parseApplicationDescription f = do
+  inputAppDesc <- inputFile auto f
+  normalizeAppDesc inputAppDesc

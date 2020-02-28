@@ -1,4 +1,4 @@
-module ElfReader ( parseElfFile ) where
+module ElfReader ( Elf, parseElfFile ) where
 
 import qualified Data.ByteString as B
 import           Data.Elf

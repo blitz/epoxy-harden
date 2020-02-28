@@ -11,12 +11,12 @@ import           Numeric.Natural        (Natural)
 
 import           ApplicationDescription
 import           CppAst
-import           ElfReader
 import           MachineDescription
 
 data GeneratedCode = GeneratedCode
-  { hppContent :: Text,
-    cppContent :: Text }
+    { hppContent :: Text
+    , cppContent :: Text
+    }
 
 generateHpp :: ApplicationDescription -> CppProgram
 generateHpp app =
@@ -70,18 +70,14 @@ kobjDef entryPoints k = VarDefinition (kobjType k) (kobjName k) (kobjInit entryP
 lookupProcEntryPoint :: [(Natural, Natural)] -> Natural -> Natural
 lookupProcEntryPoint entryPoints gid = snd $ head $ filter (\(g, _) -> g == gid) entryPoints
 
-asDescEntryPoint :: AddressSpaceDesc -> IO Natural
-asDescEntryPoint (ELF{binary=b}:_) = do
-  elf <- parseElfFile $ T.unpack $ b
-  return $ fromIntegral $ elfEntry $ elf
+asDescEntryPoint :: AddressSpaceDesc -> Natural
+asDescEntryPoint (ELF{binary=b}:_) = fromIntegral $ elfEntry b
 asDescEntryPoint (_:rest) = asDescEntryPoint rest
-asDescEntryPoint [] = fail "Address space has no ELF to provide entry point"
+asDescEntryPoint [] = error "Address space has no ELF to provide entry point"
 
-procEntryPoint :: KObject -> IO (Natural, Natural)
-procEntryPoint KObject{gid=g, impl=Process{addressSpace=a}} = do
-  entryPoint <- asDescEntryPoint a
-  return (g, entryPoint)
-procEntryPoint _                                      = error "no process"
+procEntryPoint :: KObject -> (Natural, Natural)
+procEntryPoint KObject{gid=g, impl=Process{addressSpace=a}} = (g, asDescEntryPoint a)
+procEntryPoint _ = error "no process"
 
 statementMap :: (a -> CppStatement) -> [a] -> CppStatement
 statementMap f = CompoundStatement . map f
@@ -90,35 +86,35 @@ threadPtrArray :: ApplicationDescription -> CppStatement
 threadPtrArray a = ArrayDefinition (Const (Pointer (Type "thread"))) "threads" threadInit
   where threadInit = map (AddressOf . Identifier . kobjName) (threads a)
 
-generateCpp :: ApplicationDescription -> Text -> IO CppProgram
-generateCpp app headerName = do
-  entryPoints <- mapM procEntryPoint (processes app)
-  return $
-    if isConsecutive $ map gid sortedKobjs
-    then [ Include headerName
-         , Include "kobject_all.hpp"
-         , AnonNamespace
-           [
-             -- Forward declare all kernel objects, so they can refer
-             -- to pointers to themselves without caring about
-             -- initialization order.
-             statementMap kobjFwdDecl sortedKobjs
+generateCpp :: ApplicationDescription -> Text -> CppProgram
+generateCpp app headerName =
+  if isConsecutive $ map gid sortedKobjs
+  then [ Include headerName
+       , Include "kobject_all.hpp"
+       , AnonNamespace
+         [
+           -- Forward declare all kernel objects, so they can refer
+           -- to pointers to themselves without caring about
+           -- initialization order.
+           statementMap kobjFwdDecl sortedKobjs
 
-             -- Define capability arrays for each process.
-           , statementMap procCapSetDef procs
+           -- Define capability arrays for each process.
+         , statementMap procCapSetDef procs
 
-             -- Now construct all kernel objects.
-           , statementMap (kobjDef entryPoints) sortedKobjs
-           ]
-           -- The scheduler needs to see all threads.
-         , threadPtrArray app
+           -- Now construct all kernel objects.
+         , statementMap (kobjDef entryPoints) sortedKobjs
          ]
-    else error "Need consecutive kernel object GIDs"
-  where sortedKobjs = sortByGid (kobjects app)
-        procs = processes app
+         -- The scheduler needs to see all threads.
+       , threadPtrArray app
+       ]
+  else error "Need consecutive kernel object GIDs"
+  where
+    entryPoints = map procEntryPoint $ processes app
+    sortedKobjs = sortByGid (kobjects app)
+    procs = processes app
 
-generateCode :: MachineDescription -> ApplicationDescription -> String -> IO GeneratedCode
+generateCode :: MachineDescription -> ApplicationDescription -> String -> GeneratedCode
 generateCode machine app headerName = do
   let hpp = renderProgram $ generateHpp app
-  cpp <- renderProgram <$> generateCpp app (T.pack headerName)
-  return $ GeneratedCode hpp cpp
+      cpp = renderProgram $ generateCpp app (T.pack headerName)
+  GeneratedCode hpp cpp

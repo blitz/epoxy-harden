@@ -14,18 +14,21 @@ import           ElfReader
 import           MachineDescription
 
 data BootImageArguments = BootImageArguments
-  { bootMachFile       :: FilePath,
-    bootAppFile        :: FilePath,
-    kernelTemplateFile :: FilePath,
-    outputBootImage    :: FilePath }
+    { bootMachFile       :: FilePath
+    , bootAppFile        :: FilePath
+    , kernelTemplateFile :: FilePath
+    , outputBootImage    :: FilePath
+    }
 
 data CodeGenArguments = CodeGenArguments
-  { codeGenMachFile :: FilePath,
-    codeGenAppFile  :: FilePath,
-    outHpp          :: FilePath,
-    outCpp          :: FilePath }
+    { codeGenMachFile :: FilePath
+    , codeGenAppFile  :: FilePath
+    , outHpp          :: FilePath
+    , outCpp          :: FilePath
+    }
 
-data Command = BootImage BootImageArguments | CodeGen CodeGenArguments;
+data Command = BootImage BootImageArguments
+    | CodeGen CodeGenArguments
 
 doBootImage :: BootImageArguments -> IO ()
 doBootImage args = do
@@ -34,15 +37,15 @@ doBootImage args = do
   appDesc     <- parseApplicationDescription (bootAppFile args)
   -- XXX This is incomplete, because we ignore everything else in the
   -- address spaces except the first ELF.
-  processes   <- mapM (parseElfFile . processBinary) (processes appDesc)
-  B.writeFile (outputBootImage args) (generateBootImage machineDesc elf processes)
+  let allProcesses = map processBinary (processes appDesc)
+  B.writeFile (outputBootImage args) (generateBootImage machineDesc elf allProcesses)
   putStrLn "Done!"
 
 doCodeGen :: CodeGenArguments -> IO ()
 doCodeGen args = do
   machineDesc <- parseMachineDescription (codeGenMachFile args)
   appDesc     <- parseApplicationDescription (codeGenAppFile args)
-  generated   <- generateCode machineDesc appDesc $ takeFileName $ outHpp args
+  let generated = generateCode machineDesc appDesc $ takeFileName $ outHpp args
   T.writeFile (outCpp args) (cppContent generated)
   T.writeFile (outHpp args) (hppContent generated)
 
