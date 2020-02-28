@@ -56,20 +56,50 @@ instance (FromDhall ref, FromDhall elf) => FromDhall (GenericKObjectImpl ref elf
 instance (FromDhall ref, FromDhall elf) => FromDhall (GenericKObject ref elf)
 instance (FromDhall ref, FromDhall elf) => FromDhall (GenericApplicationDescription ref elf)
 
+-- Map over all ELFs in the application description with
+-- side-effects. This will be used to transform ELF file names to
+-- actual loaded ELFs.
+asElfMapM :: (a -> IO b) -> GenericApplicationDescription r a -> IO (GenericApplicationDescription r b)
+asElfMapM f ApplicationDescription{kobjects=k} = do
+  kobj <- mapM (kobjMap f) k
+  return $ ApplicationDescription kobj
+  where
+    kobjMap :: (a -> IO b) -> GenericKObject r a -> IO (GenericKObject r b)
+    kobjMap f KObject{gid=g, impl=i} = do
+      mappedImpl <- implMap f i
+      return $ KObject g mappedImpl
+
+    implMap :: (a -> IO b) -> GenericKObjectImpl r a -> IO (GenericKObjectImpl r b)
+    implMap f Exit = return $ Exit
+    implMap f KLog{prefix=p} = return $ KLog p
+    implMap f Process{pid=p, addressSpace=a, capabilities=c} = do
+      mappedAs <- asMap f a
+      return $ Process p mappedAs c
+    implMap f Thread{process=p} = return $ Thread p
+
+    asMap :: (a -> IO b) -> [GenericAddressSpaceDescElem a] -> IO [GenericAddressSpaceDescElem b]
+    asMap = mapM . asElemMap
+
+    asElemMap :: (a -> IO b) -> GenericAddressSpaceDescElem a -> IO (GenericAddressSpaceDescElem b)
+    asElemMap f (ELF{binary=b}) = do
+      mappedElf <- f b
+      return $ ELF mappedElf
+    asElemMap f (SharedMemory{key=k, vaDestination=v}) = return $ SharedMemory k v
+
+
 -- Map over all references in the application description. This will
 -- be used to transform textual KObject references into global IDs.
-
-kobjImplRefMap :: (a -> b) -> GenericKObjectImpl a e -> GenericKObjectImpl b e
-kobjImplRefMap f Exit                                     = Exit
-kobjImplRefMap f KLog{prefix=p}                           = KLog p
-kobjImplRefMap f Process{pid=p, addressSpace=a, capabilities=c} = Process p a (f <$> c)
-kobjImplRefMap f Thread{process=p}                        = Thread $ f p
-
-kobjRefMap :: (a -> b) -> GenericKObject a e -> GenericKObject b e
-kobjRefMap f KObject{gid=g, impl=i} = KObject (f g) (kobjImplRefMap f i)
-
 asRefMap :: (a -> b) -> GenericApplicationDescription a e -> GenericApplicationDescription b e
-asRefMap f ApplicationDescription{kobjects=k} = ApplicationDescription (kobjRefMap f <$> k)
+asRefMap f ApplicationDescription{kobjects=k} = ApplicationDescription (kobjMap f <$> k)
+  where
+    kobjMap :: (a -> b) -> GenericKObject a e -> GenericKObject b e
+    kobjMap f KObject{gid=g, impl=i} = KObject (f g) (implMap f i)
+
+    implMap :: (a -> b) -> GenericKObjectImpl a e -> GenericKObjectImpl b e
+    implMap f Exit = Exit
+    implMap f KLog{prefix=p} = KLog p
+    implMap f Process{pid=p, addressSpace=a, capabilities=c} = Process p a (f <$> c)
+    implMap f Thread{process=p} = Thread $ f p
 
 -- Types as we get them from Dhall
 type InputKObjectImpl = GenericKObjectImpl Text Text
