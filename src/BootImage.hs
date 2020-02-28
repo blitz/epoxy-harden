@@ -13,6 +13,7 @@ import           Data.Maybe
 import           Data.Word
 
 import           AddressSpace
+import           ApplicationDescription
 import           ElfWriter
 import           EpoxyState
 import           FrameAlloc
@@ -87,8 +88,12 @@ patchPt elf as sym ptFrame idx =
   patchWord64 (fromIntegral (fromIntegral idx * 8 + symPhys)) (ptFrameToSATP ptFrame)
   where symPhys = fromJust $ lookupPhys as $ fromIntegral $ symbolToVirt sym elf
 
-generateBootImage :: MachineDescription -> Elf -> [Elf] -> B.ByteString
-generateBootImage mDesc kernelElf processElfs = evalFromInitial $ do
+generateBootImage :: MachineDescription -> Elf -> ApplicationDescription -> B.ByteString
+generateBootImage mDesc kernelElf appDesc = evalFromInitial $ do
+  -- XXX This is incomplete, because we ignore everything else in the
+  -- address spaces except the first ELF.
+  let processElfs = map processBinary (processes appDesc)
+
   kernelAs <- loadKernelElf kernelElf
   userAss <- mapM (loadUserElf kernelAs) processElfs
   pts <- realizePageTables (map constructPageTable (kernelAs:userAss))

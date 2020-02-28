@@ -35,10 +35,7 @@ doBootImage args = do
   elf <- parseElfFile (kernelTemplateFile args)
   machineDesc <- parseMachineDescription $ bootMachFile args
   appDesc     <- parseApplicationDescription (bootAppFile args)
-  -- XXX This is incomplete, because we ignore everything else in the
-  -- address spaces except the first ELF.
-  let allProcesses = map processBinary (processes appDesc)
-  B.writeFile (outputBootImage args) (generateBootImage machineDesc elf allProcesses)
+  B.writeFile (outputBootImage args) (generateBootImage machineDesc elf appDesc)
   putStrLn "Done!"
 
 doCodeGen :: CodeGenArguments -> IO ()
