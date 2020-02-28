@@ -32,6 +32,8 @@ doBootImage args = do
   elf <- parseElfFile (kernelTemplateFile args)
   machineDesc <- parseMachineDescription $ bootMachFile args
   appDesc     <- parseApplicationDescription (bootAppFile args)
+  -- XXX This is incomplete, because we ignore everything else in the
+  -- address spaces except the first ELF.
   processes   <- mapM (parseElfFile . processBinary) (processes appDesc)
   B.writeFile (outputBootImage args) (generateBootImage machineDesc elf processes)
   putStrLn "Done!"

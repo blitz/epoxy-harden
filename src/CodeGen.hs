@@ -70,10 +70,17 @@ kobjDef entryPoints k = VarDefinition (kobjType k) (kobjName k) (kobjInit entryP
 lookupProcEntryPoint :: [(Natural, Natural)] -> Natural -> Natural
 lookupProcEntryPoint entryPoints gid = snd $ head $ filter (\(g, _) -> g == gid) entryPoints
 
-procEntryPoint :: KObject -> IO (Natural, Natural)
-procEntryPoint KObject{gid=g, impl=Process{binary=b}} = do
+asDescEntryPoint :: AddressSpaceDesc -> IO Natural
+asDescEntryPoint (ELF{binary=b}:_) = do
   elf <- parseElfFile $ T.unpack $ b
-  return (g, fromIntegral $ elfEntry $ elf)
+  return $ fromIntegral $ elfEntry $ elf
+asDescEntryPoint (_:rest) = asDescEntryPoint rest
+asDescEntryPoint [] = fail "Address space has no ELF to provide entry point"
+
+procEntryPoint :: KObject -> IO (Natural, Natural)
+procEntryPoint KObject{gid=g, impl=Process{addressSpace=a}} = do
+  entryPoint <- asDescEntryPoint a
+  return (g, entryPoint)
 procEntryPoint _                                      = error "no process"
 
 statementMap :: (a -> CppStatement) -> [a] -> CppStatement

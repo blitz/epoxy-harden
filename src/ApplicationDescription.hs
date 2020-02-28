@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -10,12 +11,19 @@ import qualified Data.Set        as Set
 import qualified Data.Text       as T
 import           Dhall
 
+data AddressSpaceDescElem = ELF { binary :: Text }
+                          | SharedMemory { key :: Text, vaDestination :: Natural }
+  deriving (Show, FromDhall, Generic)
+
+type AddressSpaceDesc = [AddressSpaceDescElem]
+
 -- The appliation description is generic for different kernel object
 -- reference types, because we get it first with textual references
 -- and have to post-process it to use integers.
 data GenericKObjectImpl ref = Exit
                             | KLog { prefix :: Text }
-                            | Process { pid :: Natural, binary :: Text, capabilities :: [ref]}
+                            | Process { pid :: Natural, addressSpace :: AddressSpaceDesc,
+                                        capabilities :: [ref]}
                             | Thread { process :: ref }
   deriving (Generic, Show)
 
@@ -32,7 +40,7 @@ instance FromDhall ref => FromDhall (GenericApplicationDescription ref)
 instance Functor GenericKObjectImpl where
   fmap f Exit                                     = Exit
   fmap f KLog{prefix=p}                           = KLog p
-  fmap f Process{pid=p, binary=b, capabilities=c} = Process p b (f <$> c)
+  fmap f Process{pid=p, addressSpace=a, capabilities=c} = Process p a (f <$> c)
   fmap f Thread{process=p}                        = Thread $ f p
 
 instance Functor GenericKObject where
@@ -93,9 +101,17 @@ processCaps :: KObject -> [Natural]
 processCaps KObject{impl=Process{capabilities=c}} = c
 processCaps _                                     = error "not a process"
 
+processAddressSpace :: KObject -> AddressSpaceDesc
+processAddressSpace KObject{impl=Process{addressSpace=a}} = a
+processAddressSpace _                                     = error "not a process"
+
+addressSpaceDescBinary :: AddressSpaceDesc -> Text
+addressSpaceDescBinary (ELF{binary=b}:_) = b
+addressSpaceDescBinary (_:rest)          = addressSpaceDescBinary rest
+addressSpaceDescBinary []                = error "Address space has no ELF"
+
 processBinary :: KObject -> String
-processBinary KObject{impl=Process{binary=b}} = T.unpack b
-processBinary _                               = error "not a process"
+processBinary = T.unpack . addressSpaceDescBinary . processAddressSpace
 
 kobjectKind :: KObject -> Text
 kobjectKind KObject{impl=Exit}      = "exit_kobject"
