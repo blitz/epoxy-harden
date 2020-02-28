@@ -70,7 +70,7 @@ asElfMapM f ApplicationDescription{kobjects=k} = do
       return $ KObject g mappedImpl
 
     implMap :: (a -> IO b) -> GenericKObjectImpl r a -> IO (GenericKObjectImpl r b)
-    implMap f Exit = return $ Exit
+    implMap f Exit = return Exit
     implMap f KLog{prefix=p} = return $ KLog p
     implMap f Process{pid=p, addressSpace=a, capabilities=c} = do
       mappedAs <- asMap f a
@@ -81,11 +81,10 @@ asElfMapM f ApplicationDescription{kobjects=k} = do
     asMap = mapM . asElemMap
 
     asElemMap :: (a -> IO b) -> GenericAddressSpaceDescElem a -> IO (GenericAddressSpaceDescElem b)
-    asElemMap f (ELF{binary=b}) = do
+    asElemMap f ELF{binary=b} = do
       mappedElf <- f b
       return $ ELF mappedElf
-    asElemMap f (SharedMemory{key=k, vaDestination=v}) = return $ SharedMemory k v
-
+    asElemMap f SharedMemory{key=k, vaDestination=v} = return $ SharedMemory k v
 
 -- Map over all references in the application description. This will
 -- be used to transform textual KObject references into global IDs.
