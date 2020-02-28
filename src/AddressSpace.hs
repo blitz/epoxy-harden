@@ -10,8 +10,11 @@ import qualified Data.Set        as Set
 import           FrameAlloc
 import           Interval
 
-data Permission = Read | Write | Execute | User
-  deriving (Show, Eq, Ord)
+data Permission = Read
+    | Write
+    | Execute
+    | User
+    deriving (Show, Eq, Ord)
 
 type PermissionSet = Set Permission
 
@@ -32,14 +35,17 @@ elfSegmentFlagToPermission sflag =
 fromElfSegmentFlags :: [ElfSegmentFlag] -> PermissionSet
 fromElfSegmentFlags = Set.fromList . mapMaybe elfSegmentFlagToPermission
 
-data BackingStore = Preloaded Frame B.ByteString | Anywhere B.ByteString | Fixed Frame Int
-  deriving (Show)
+data BackingStore = Preloaded Frame B.ByteString
+    | Anywhere B.ByteString
+    | Fixed Frame Int
+    deriving (Show)
 
 data AddressSpaceChunk = AddressSpaceChunk
-  { virtStart    :: Page,
-    backingStore :: BackingStore,
-    permissions  :: PermissionSet }
-  deriving (Show)
+    { virtStart    :: Page
+    , backingStore :: BackingStore
+    , permissions  :: PermissionSet
+    }
+    deriving (Show)
 
 type AddressSpace = [AddressSpaceChunk]
 
