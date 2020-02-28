@@ -18,8 +18,8 @@ library
   default-language:    Haskell2010
   ghc-options:         -fwarn-unused-imports
   exposed-modules:     MachineDescription,ElfReader, BootImage, CodeGen,
-                       ApplicationDescription
-  other-modules:       EpoxyState, AddressSpace, PageTable, CppAst, RiscV, Interval, ElfWriter, FrameAlloc, PhysMem
+                       ApplicationDescription, Interval, PhysMem
+  other-modules:       EpoxyState, AddressSpace, PageTable, CppAst, RiscV, ElfWriter, FrameAlloc
   build-depends:       base >= 4.7 && < 5,
                        containers,
                        bytestring,
