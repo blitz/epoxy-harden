@@ -11,53 +11,75 @@ import qualified Data.Set        as Set
 import qualified Data.Text       as T
 import           Dhall
 
-data AddressSpaceDescElem = ELF { binary :: Text }
-                          | SharedMemory { key :: Text, vaDestination :: Natural }
-  deriving (Show, FromDhall, Generic)
+data GenericAddressSpaceDescElem elf = ELF
+    { binary :: elf
+    }
+    | SharedMemory
+    { key           :: Text
+    , vaDestination :: Natural
+    }
+    deriving (Generic, Show)
 
-type AddressSpaceDesc = [AddressSpaceDescElem]
+instance FromDhall elf => FromDhall (GenericAddressSpaceDescElem elf)
+
+type AddressSpaceDesc = [GenericAddressSpaceDescElem Text]
 
 -- The appliation description is generic for different kernel object
 -- reference types, because we get it first with textual references
 -- and have to post-process it to use integers.
-data GenericKObjectImpl ref = Exit
-                            | KLog { prefix :: Text }
-                            | Process { pid :: Natural, addressSpace :: AddressSpaceDesc,
-                                        capabilities :: [ref]}
-                            | Thread { process :: ref }
-  deriving (Generic, Show)
+data GenericKObjectImpl ref elf = Exit
+    | KLog
+    { prefix :: Text
+    }
+    | Process
+    { pid          :: Natural
+    , addressSpace :: [GenericAddressSpaceDescElem elf]
+    , capabilities :: [ref]
+    }
+    | Thread
+    { process :: ref
+    }
+    deriving (Generic, Show)
 
-data GenericKObject ref = KObject { gid :: ref, impl :: GenericKObjectImpl ref }
-  deriving (Generic, Show)
+data GenericKObject ref elf = KObject
+    { gid  :: ref
+    , impl :: GenericKObjectImpl ref elf
+    }
+    deriving (Generic, Show)
 
-data GenericApplicationDescription ref = ApplicationDescription { kobjects :: [GenericKObject ref]}
-  deriving (Generic, Show)
+data GenericApplicationDescription ref elf = ApplicationDescription
+    { kobjects :: [GenericKObject ref elf]
+    }
+    deriving (Generic, Show)
 
-instance FromDhall ref => FromDhall (GenericKObjectImpl ref)
-instance FromDhall ref => FromDhall (GenericKObject ref)
-instance FromDhall ref => FromDhall (GenericApplicationDescription ref)
+instance (FromDhall ref, FromDhall elf) => FromDhall (GenericKObjectImpl ref elf)
+instance (FromDhall ref, FromDhall elf) => FromDhall (GenericKObject ref elf)
+instance (FromDhall ref, FromDhall elf) => FromDhall (GenericApplicationDescription ref elf)
 
-instance Functor GenericKObjectImpl where
-  fmap f Exit                                     = Exit
-  fmap f KLog{prefix=p}                           = KLog p
-  fmap f Process{pid=p, addressSpace=a, capabilities=c} = Process p a (f <$> c)
-  fmap f Thread{process=p}                        = Thread $ f p
+-- Map over all references in the application description. This will
+-- be used to transform textual KObject references into global IDs.
 
-instance Functor GenericKObject where
-  fmap f KObject{gid=g, impl=i} = KObject (f g) (f <$> i)
+kobjImplRefMap :: (a -> b) -> GenericKObjectImpl a e -> GenericKObjectImpl b e
+kobjImplRefMap f Exit                                     = Exit
+kobjImplRefMap f KLog{prefix=p}                           = KLog p
+kobjImplRefMap f Process{pid=p, addressSpace=a, capabilities=c} = Process p a (f <$> c)
+kobjImplRefMap f Thread{process=p}                        = Thread $ f p
 
-instance Functor GenericApplicationDescription where
-  fmap f ApplicationDescription{kobjects=k} = ApplicationDescription (fmap f <$> k)
+kobjRefMap :: (a -> b) -> GenericKObject a e -> GenericKObject b e
+kobjRefMap f KObject{gid=g, impl=i} = KObject (f g) (kobjImplRefMap f i)
+
+asRefMap :: (a -> b) -> GenericApplicationDescription a e -> GenericApplicationDescription b e
+asRefMap f ApplicationDescription{kobjects=k} = ApplicationDescription (kobjRefMap f <$> k)
 
 -- Types as we get them from Dhall
-type InputKObjectImpl = GenericKObjectImpl Text
-type InputKObject = GenericKObject Text
-type InputApplicationDescription = GenericApplicationDescription Text
+type InputKObjectImpl = GenericKObjectImpl Text Text
+type InputKObject = GenericKObject Text Text
+type InputApplicationDescription = GenericApplicationDescription Text Text
 
 -- Types as we use them later in this program
-type KObjectImpl = GenericKObjectImpl Natural
-type KObject = GenericKObject Natural
-type ApplicationDescription = GenericApplicationDescription Natural
+type KObjectImpl = GenericKObjectImpl Natural Text
+type KObject = GenericKObject Natural Text
+type ApplicationDescription = GenericApplicationDescription Natural Text
 
 -- Conversion from input application config to the internal
 -- representation. We replace textual IDs by sequential integers.
@@ -71,7 +93,7 @@ gidNameToNaturalMappings :: InputApplicationDescription -> GidMap
 gidNameToNaturalMappings a = Map.fromList $ zip (allGids a) [0..]
 
 normalizeAppDesc :: InputApplicationDescription -> ApplicationDescription
-normalizeAppDesc a = (Map.!) gidMap <$> a
+normalizeAppDesc a = asRefMap ((Map.!) gidMap) a
   where
     gidMap = gidNameToNaturalMappings a
 
@@ -101,11 +123,11 @@ processCaps :: KObject -> [Natural]
 processCaps KObject{impl=Process{capabilities=c}} = c
 processCaps _                                     = error "not a process"
 
-processAddressSpace :: KObject -> AddressSpaceDesc
+processAddressSpace :: KObject -> [GenericAddressSpaceDescElem Text]
 processAddressSpace KObject{impl=Process{addressSpace=a}} = a
 processAddressSpace _                                     = error "not a process"
 
-addressSpaceDescBinary :: AddressSpaceDesc -> Text
+addressSpaceDescBinary :: [GenericAddressSpaceDescElem a] -> a
 addressSpaceDescBinary (ELF{binary=b}:_) = b
 addressSpaceDescBinary (_:rest)          = addressSpaceDescBinary rest
 addressSpaceDescBinary []                = error "Address space has no ELF"
