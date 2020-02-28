@@ -8,8 +8,8 @@ import           Dhall
 
 -- Data types for the machine description JSON file. These model the E820 map.
 
-data MemoryMapType = Available | Reserved
-  deriving (Bounded, Enum, Eq, FromDhall, Generic, Show)
+data MemoryMapType = Available | Device { key :: Text }
+  deriving (Eq, FromDhall, Generic, Show)
 
 data MemoryMapEntry = MemoryMapEntry { baseAddress  :: Natural,
                                        memoryLength :: Natural,
