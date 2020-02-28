@@ -37,8 +37,14 @@ kobjNameFromGid g = "kobject_" `T.append` showT g
 kobjName :: KObject -> Text
 kobjName = kobjNameFromGid . gid
 
+kobjKind :: KObject -> Text
+kobjKind KObject{impl=Exit}      = "exit_kobject"
+kobjKind KObject{impl=KLog{}}    = "klog_kobject"
+kobjKind KObject{impl=Process{}} = "process"
+kobjKind KObject{impl=Thread{}}  = "thread"
+
 kobjType :: KObject -> CppType
-kobjType = Type . kobjectKind
+kobjType = Type . kobjKind
 
 kobjFwdDecl :: KObject -> CppStatement
 kobjFwdDecl k = FwdVarDeclaration (kobjType k) (kobjName k)

@@ -165,12 +165,6 @@ addressSpaceDescBinary []                = error "Address space has no ELF"
 processBinary :: KObject -> Elf
 processBinary = addressSpaceDescBinary . processAddressSpace
 
-kobjectKind :: KObject -> Text
-kobjectKind KObject{impl=Exit}      = "exit_kobject"
-kobjectKind KObject{impl=KLog{}}    = "klog_kobject"
-kobjectKind KObject{impl=Process{}} = "process"
-kobjectKind KObject{impl=Thread{}}  = "thread"
-
 parseApplicationDescription :: FilePath -> IO ApplicationDescription
 parseApplicationDescription f = do
   inputAppDesc <- inputFile auto f

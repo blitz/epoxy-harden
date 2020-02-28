@@ -72,8 +72,8 @@ zeroExtend bytes len
 segmentData :: ElfSegment -> B.ByteString
 segmentData seg = zeroExtend (elfSegmentData seg) (toInteger (elfSegmentMemSize seg))
 
-toAddressSpace :: Elf -> PermissionSet -> AddressSpace
-toAddressSpace elf defaultPerm =
+elfToAddressSpace :: Elf -> PermissionSet -> AddressSpace
+elfToAddressSpace elf defaultPerm =
   [toAddressSpaceChunk s | s <- elfSegments elf, elfSegmentType s == PT_LOAD && elfSegmentMemSize s > 0]
   where
     toAddressSpaceChunk :: ElfSegment -> AddressSpaceChunk

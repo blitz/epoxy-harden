@@ -52,13 +52,13 @@ allocateAddressSpace = mapM allocateChunk
 
 loadKernelElf :: Elf -> State Epoxy AddressSpace
 loadKernelElf kernelElf = do
-  as <- allocateAddressSpace $ toAddressSpace kernelElf noPermissions
+  as <- allocateAddressSpace $ elfToAddressSpace kernelElf noPermissions
   writeAddressSpace as
   return as
 
 loadUserElf :: AddressSpace -> Elf -> State Epoxy AddressSpace
 loadUserElf kernelAs userElf = do
-  as <- allocateAddressSpace $ toAddressSpace userElf userPermissions
+  as <- allocateAddressSpace $ elfToAddressSpace userElf userPermissions
   writeAddressSpace as
   return $ infuseKernel kernelAs as
 
