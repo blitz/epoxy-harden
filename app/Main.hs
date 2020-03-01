@@ -3,9 +3,10 @@ module Main where
 import qualified Data.ByteString        as B
 import           Data.Semigroup         ((<>))
 import qualified Data.Text.IO           as T
+import qualified GHC.IO.Encoding
 import           Options.Applicative
 import           System.FilePath.Posix
-
+import qualified System.IO
 
 import           ApplicationDescription
 import           BootImage
@@ -72,5 +73,8 @@ cmdParser = subparser
                        (progDesc "Generate kernel header and cpp files")))
 
 main :: IO ()
-main = doEpoxy =<< execParser opts
+main = do
+  -- Setting the encoding manually is required to make Dhall recognize Unicode
+  GHC.IO.Encoding.setLocaleEncoding System.IO.utf8
+  doEpoxy =<< execParser opts
   where opts = info (cmdParser <**> helper) (fullDesc <> progDesc "The Epoxy Swiss Army Knife")

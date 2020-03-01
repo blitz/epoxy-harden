@@ -38,4 +38,4 @@ findMemoryWithKey desc keyToFind = find matchesKey $ memoryMap desc
 
 -- Read the machine description
 parseMachineDescription :: FilePath -> IO MachineDescription
-parseMachineDescription = detailed . inputFile auto
+parseMachineDescription = inputFile auto
