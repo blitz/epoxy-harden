@@ -1,7 +1,6 @@
 module Main where
 
 import qualified Data.ByteString        as B
-import           Data.Semigroup         ((<>))
 import qualified Data.Text.IO           as T
 import qualified GHC.IO.Encoding
 import           Options.Applicative
