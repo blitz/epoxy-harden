@@ -3,31 +3,10 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages:
-- completed:
-    hackage: elf-0.30@sha256:c43915ff7a88500e728655d7f3a27e4016cffd824fa8b996c4cc35600dd8279f,1375
-    pantry-tree:
-      size: 703
-      sha256: e091de0fb7c57fba3c2c47fb5505884ab8c2fdaa3f3a7c32b628a5dddd8453af
-  original:
-    hackage: elf-0.30
-- completed:
-    hackage: dhall-1.30.0@sha256:38d6c37fda7fc5d32bd90cd6172efe25a4eb7c9949c0ce015a4be500c7825fdd,32875
-    pantry-tree:
-      size: 248056
-      sha256: 04ab967ef886c3cbf95cef574d8e906a81be3cb56ca192921ea280aaf1fa0f42
-  original:
-    hackage: dhall-1.30.0
-- completed:
-    hackage: prettyprinter-1.5.1@sha256:fca87c3e2611d3499a0341a59857e9b424a23f31646e4737d535a18582284f96,5375
-    pantry-tree:
-      size: 2106
-      sha256: 86fd583112db41bac5ac9ecf258ec402ad615253e9c5eabc56ec127bfb94c096
-  original:
-    hackage: prettyprinter-1.5.1
+packages: []
 snapshots:
 - completed:
-    size: 524996
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/14/27.yaml
-    sha256: 7ea31a280c56bf36ff591a7397cc384d0dff622e7f9e4225b47d8980f019a0f0
-  original: lts-14.27
+    size: 491389
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/15/7.yaml
+    sha256: 92ab6303fe20ec928461c82ce0980b4d17c06f4e66205a2967e476474f686c17
+  original: lts-15.7
