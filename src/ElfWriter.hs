@@ -64,19 +64,22 @@ beHeaderSize elf = fromIntegral $ ehdrLen + (phdrLen * length (beSegments elf))
 -- These are low-level representations of the program and segment
 -- headers for the ELF file we want to generate.
 
+class64Bit :: Word8
+class64Bit = 0x02
+
 dataLittleEndian :: Word8
 dataLittleEndian = 0x01
 
-machineRiscV :: Word8
+machineRiscV :: Word16
 machineRiscV = 0xf3
 
-typeExec :: Word8
+typeExec :: Word16
 typeExec = 0x02
 
 data Ehdr = Ehdr
   { ehdrEntryPoint :: Word64,
     ehdrData       :: Word8,
-    ehdrMachine    :: Word8,
+    ehdrMachine    :: Word16,
     ehdrPhdrCount  :: Word16 }
 
 data Phdr = Phdr
@@ -89,8 +92,7 @@ data Phdr = Phdr
 data SerializedElf = SerializedElf
   { selfEhdr  :: Ehdr,
     selfPhdrs :: [Phdr],
-    selfData  :: B.ByteString
-  }
+    selfData  :: B.ByteString }
 
 -- Given a list of lengths of strings, returns a list of offsets where
 -- these strings start if they are all concatenated.
@@ -118,12 +120,20 @@ toSerializedElf elf = SerializedElf ehdr phdrs bytes
 serializeEhdr :: Ehdr -> Put
 serializeEhdr ehdr = do
   putWord32be 0x7F454c46        -- Magic
-  -- TODO Use values from ehdr
-  putWord32be 0x02010100        -- 64-Bit ELF Little-Endian
+
+  putWord8 class64Bit
+  putWord8 dataLittleEndian
+  putWord8 1                    -- Version
+  putWord8 0                    -- System-V ABI
+
   putWord64be 0
 
-  -- TODO Use values from ehdr
-  putWord64be 0x0200f30001000000 -- Type, Machine, Version
+  -- The fields below use the endianness indicated above.
+
+  putWord16le typeExec
+  putWord16le (ehdrMachine ehdr)
+  putWord32le 1                 -- Version
+
   putWord64le (ehdrEntryPoint ehdr)
 
   putWord64le (fromIntegral ehdrLen) -- Start of Phdrs
