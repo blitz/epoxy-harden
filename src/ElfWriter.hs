@@ -64,6 +64,9 @@ beHeaderSize elf = fromIntegral $ ehdrLen + (phdrLen * length (beSegments elf))
 -- These are low-level representations of the program and segment
 -- headers for the ELF file we want to generate.
 
+class32Bit :: Word8
+class32Bit = 0x01
+
 class64Bit :: Word8
 class64Bit = 0x02
 
@@ -83,11 +86,11 @@ data Ehdr = Ehdr
     ehdrPhdrCount  :: Word16 }
 
 data Phdr = Phdr
-  { fileOffset :: Word64,
-    virtAddr   :: Word64,
-    physAddr   :: Word64,
-    fileSize   :: Word64,
-    memSize    :: Word64 }
+  { phdrFileOffset :: Word64,
+    phdrVirtAddr   :: Word64,
+    phdrPhysAddr   :: Word64,
+    phdrFileSize   :: Word64,
+    phdrMemSize    :: Word64 }
 
 data SerializedElf = SerializedElf
   { selfEhdr  :: Ehdr,
@@ -131,7 +134,7 @@ serializeEhdr ehdr = do
   -- The fields below use the endianness indicated above.
 
   putWord16le typeExec
-  putWord16le (ehdrMachine ehdr)
+  putWord16le $ ehdrMachine ehdr
   putWord32le 1                 -- Version
 
   putWord64le (ehdrEntryPoint ehdr)
@@ -150,11 +153,11 @@ serializePhdr :: Phdr -> Put
 serializePhdr phdr = do
   putWord32le 1                 -- PT_LOAD
   putWord32le 7                 -- flags (RWX)
-  putWord64le (fileOffset phdr)
-  putWord64le (virtAddr phdr)
-  putWord64le (physAddr phdr)
-  putWord64le (fileSize phdr)
-  putWord64le (memSize phdr)
+  putWord64le $ phdrFileOffset phdr
+  putWord64le $ phdrVirtAddr phdr
+  putWord64le $ phdrPhysAddr phdr
+  putWord64le $ phdrFileSize phdr
+  putWord64le $ phdrMemSize phdr
   putWord64le 1                 -- Alignment
 
 serializeElf :: SerializedElf -> BL.ByteString
