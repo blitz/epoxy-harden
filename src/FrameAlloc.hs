@@ -5,7 +5,6 @@ module FrameAlloc where
 
 import           Data.Bits
 import           Data.List (find)
-import           Interval  (Interval)
 import           Interval  as I
 
 type Frame = Integer

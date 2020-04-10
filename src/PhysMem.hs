@@ -7,7 +7,6 @@ module PhysMem (MemoryChunk(..),
 
 import qualified Data.ByteString.Lazy as BL
 import           Data.List
-import           Data.Monoid          ((<>))
 import           FrameAlloc
 import           GHC.Word             (Word8)
 import           Interval

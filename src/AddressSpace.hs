@@ -3,7 +3,6 @@ module AddressSpace where
 import qualified Data.ByteString as B
 import           Data.Elf
 import           Data.Maybe
-import           Data.Semigroup  ((<>))
 import           Data.Set        (Set)
 import qualified Data.Set        as Set
 
