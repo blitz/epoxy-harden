@@ -1,5 +1,6 @@
 module ElfWriter (bootElfFromMemory) where
 
+import           Control.Monad (when)
 import           Data.Binary.Put
 import qualified Data.ByteString      as B
 import qualified Data.ByteString.Lazy as BL
@@ -49,6 +50,7 @@ import           PhysMem
 data BootArchitecture = RiscV64
 
 data BootClass = Class32 | Class64
+  deriving (Eq)
 
 bootClass :: BootArchitecture -> BootClass
 bootClass RiscV64 = Class64
@@ -126,7 +128,8 @@ data Ehdr = Ehdr
     ehdrEntryPoint :: Word64 }
 
 data Phdr = Phdr
-  { phdrFileOffset :: Word64,
+  { phdrClass      :: BootClass,
+    phdrFileOffset :: Word64,
     phdrVirtAddr   :: Word64,
     phdrPhysAddr   :: Word64,
     phdrFileSize   :: Word64,
@@ -150,8 +153,8 @@ segmentDataOffsets :: BootElf -> [Word64]
 segmentDataOffsets elf = (+ beHeaderSize elf) <$> cumulativeOffsets lengths
   where lengths = bsFileSize <$> beSegments elf
 
-toPhdr :: Word64 -> BootSegment -> Phdr
-toPhdr offset segment = Phdr offset (bsPhys segment) (bsPhys segment) (bsFileSize segment) (bsMemSize segment)
+toPhdr :: BootClass -> Word64 -> BootSegment -> Phdr
+toPhdr c offset segment = Phdr c offset (bsPhys segment) (bsPhys segment) (bsFileSize segment) (bsMemSize segment)
 
 elfClass :: BootArchitecture -> Word16
 elfClass RiscV64 = 0x00F3
@@ -159,9 +162,10 @@ elfClass RiscV64 = 0x00F3
 serializeElf :: BootElf -> SerializedElf
 serializeElf elf = SerializedElf ehdr phdrs bytes
   where
-    ehdr = Ehdr (bootClass (beArch elf)) dataLittleEndian (elfClass (beArch elf)) (fromIntegral (length $ beSegments elf)) (beEntryPoint elf)
-    phdrs = uncurry toPhdr <$> zip (segmentDataOffsets elf) (beSegments elf)
+    ehdr = Ehdr c dataLittleEndian (elfClass (beArch elf)) (fromIntegral (length $ beSegments elf)) (beEntryPoint elf)
+    phdrs = uncurry (toPhdr c) <$> zip (segmentDataOffsets elf) (beSegments elf)
     bytes = B.concat $ bsFileData <$> beSegments elf
+    c = bootClass $ beArch elf
 
 putWordNative :: BootClass -> Word64 -> Put
 putWordNative Class32 = putWord32le . fromIntegral
@@ -200,17 +204,26 @@ putEhdr ehdr = do
   putWord16le 0                 -- Stridx
   where c = ehdrClass ehdr
 
--- TODO Fix this for 32-bit.
 putPhdr :: Phdr -> Put
 putPhdr phdr = do
   putWord32le 1                 -- PT_LOAD
-  putWord32le 7                 -- flags (RWX)
-  putWord64le $ phdrFileOffset phdr
-  putWord64le $ phdrVirtAddr phdr
-  putWord64le $ phdrPhysAddr phdr
-  putWord64le $ phdrFileSize phdr
-  putWord64le $ phdrMemSize phdr
-  putWord64le 1                 -- Alignment
+
+  when (c == Class64)
+    putFlags
+
+  putWordNative c $ phdrFileOffset phdr
+  putWordNative c $ phdrVirtAddr phdr
+  putWordNative c $ phdrPhysAddr phdr
+  putWordNative c $ phdrFileSize phdr
+  putWordNative c $ phdrMemSize phdr
+
+  when (c == Class32)
+    putFlags
+
+  putWordNative c 1                 -- Alignment
+  where
+    c = phdrClass phdr
+    putFlags = putWord32le 7    -- flags (RWX)
 
 putElf :: SerializedElf -> BL.ByteString
 putElf elf = runPut $ do
