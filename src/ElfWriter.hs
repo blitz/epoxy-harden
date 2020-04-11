@@ -124,8 +124,8 @@ toPhdr offset segment = Phdr offset (bsPhys segment) (bsPhys segment) (bsFileSiz
 elfClass :: BootArchitecture -> Word16
 elfClass RiscV64 = 0x00F3
 
-toSerializedElf :: BootElf -> SerializedElf
-toSerializedElf elf = SerializedElf ehdr phdrs bytes
+serializeElf :: BootElf -> SerializedElf
+serializeElf elf = SerializedElf ehdr phdrs bytes
   where
     ehdr = Ehdr (bootClass (beArch elf)) dataLittleEndian (elfClass (beArch elf)) (fromIntegral (length $ beSegments elf)) (beEntryPoint elf)
     phdrs = uncurry toPhdr <$> zip (segmentDataOffsets elf) (beSegments elf)
@@ -135,8 +135,8 @@ putWordNative :: BootClass -> Word64 -> Put
 putWordNative Class32 = putWord32le . fromIntegral
 putWordNative Class64 = putWord64le
 
-serializeEhdr :: Ehdr -> Put
-serializeEhdr ehdr = do
+putEhdr :: Ehdr -> Put
+putEhdr ehdr = do
   putWord32be 0x7F454c46        -- Magic
 
   putWord8 (case c of
@@ -169,8 +169,8 @@ serializeEhdr ehdr = do
   where c = ehdrClass ehdr
 
 -- TODO Fix this for 32-bit.
-serializePhdr :: Phdr -> Put
-serializePhdr phdr = do
+putPhdr :: Phdr -> Put
+putPhdr phdr = do
   putWord32le 1                 -- PT_LOAD
   putWord32le 7                 -- flags (RWX)
   putWord64le $ phdrFileOffset phdr
@@ -180,11 +180,12 @@ serializePhdr phdr = do
   putWord64le $ phdrMemSize phdr
   putWord64le 1                 -- Alignment
 
-serializeElf :: SerializedElf -> BL.ByteString
-serializeElf elf = runPut $ do
-  serializeEhdr $ selfEhdr elf
-  mapM_ serializePhdr $ selfPhdrs elf
+putElf :: SerializedElf -> BL.ByteString
+putElf elf = runPut $ do
+  putEhdr $ selfEhdr elf
+  mapM_ putPhdr $ selfPhdrs elf
   putByteString $ selfData elf
 
 bootElfFromMemory :: Word64 -> Memory -> B.ByteString
-bootElfFromMemory e = BL.toStrict . serializeElf . toSerializedElf . toBootElf RiscV64 e . flatten
+bootElfFromMemory entryPoint
+  = BL.toStrict . putElf . serializeElf . toBootElf RiscV64 entryPoint . flatten
