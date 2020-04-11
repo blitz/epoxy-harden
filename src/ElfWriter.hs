@@ -47,13 +47,14 @@ import           PhysMem
 --
 -- [1] https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
 
-data BootArchitecture = RiscV64
+data BootArchitecture = RiscV64 | RiscV32
 
 data BootClass = Class32 | Class64
   deriving (Eq)
 
 bootClass :: BootArchitecture -> BootClass
 bootClass RiscV64 = Class64
+bootClass RiscV32 = Class32
 
 data BootSegment = BootSegment
   { bsPhys :: Word64,
@@ -114,9 +115,6 @@ class64Bit = 0x02
 dataLittleEndian :: Word8
 dataLittleEndian = 0x01
 
-machineRiscV :: Word16
-machineRiscV = 0xf3
-
 typeExec :: Word16
 typeExec = 0x02
 
@@ -158,6 +156,7 @@ toPhdr c offset segment = Phdr c offset (bsPhys segment) (bsPhys segment) (bsFil
 
 elfClass :: BootArchitecture -> Word16
 elfClass RiscV64 = 0x00F3
+elfClass RiscV32 = 0x00F3
 
 serializeElf :: BootElf -> SerializedElf
 serializeElf elf = SerializedElf ehdr phdrs bytes
@@ -167,9 +166,9 @@ serializeElf elf = SerializedElf ehdr phdrs bytes
     bytes = B.concat $ bsFileData <$> beSegments elf
     c = bootClass $ beArch elf
 
-putWordNative :: BootClass -> Word64 -> Put
+putWordNative :: Integral w => BootClass -> w -> Put
 putWordNative Class32 = putWord32le . fromIntegral
-putWordNative Class64 = putWord64le
+putWordNative Class64 = putWord64le . fromIntegral
 
 putEhdr :: Ehdr -> Put
 putEhdr ehdr = do
@@ -191,9 +190,9 @@ putEhdr ehdr = do
   putWord16le $ ehdrMachine ehdr
   putWord32le 1                 -- Version
 
-  putWordNative c (ehdrEntryPoint ehdr)
-  putWordNative c (fromIntegral $ ehdrLen c) -- Start of Phdrs
-  putWordNative c 0   -- Start of Shdrs (we have none)
+  putWordNative c $ ehdrEntryPoint ehdr
+  putWordNative c $ ehdrLen c   -- Start of Phdrs
+  putWordNative c 0             -- Start of Shdrs (we have none)
 
   putWord32le 0                 -- Flags
   putWord16le (fromIntegral $ ehdrLen c)
@@ -220,7 +219,7 @@ putPhdr phdr = do
   when (c == Class32)
     putFlags
 
-  putWordNative c 1                 -- Alignment
+  putWordNative c 1             -- Alignment
   where
     c = phdrClass phdr
     putFlags = putWord32le 7    -- flags (RWX)
