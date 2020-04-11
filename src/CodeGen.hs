@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module CodeGen (generateCode, GeneratedCode, hppContent, cppContent,
-               ) where
+module CodeGen (generateCode, GeneratedCode, hppContent, cppContent)
+where
 
 import           Data.Elf               (elfEntry)
 import           Data.List

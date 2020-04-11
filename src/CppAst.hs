@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module CppAst where
+module CppAst (renderProgram, showT,
+               ArrayLength(..), CppProgram(..), CppStatement(..), CppExpression(..), CppType(..))
+where
 
 import           Data.Text       (Text)
 import qualified Data.Text       as T
