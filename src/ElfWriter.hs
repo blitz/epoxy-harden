@@ -8,11 +8,43 @@ import           Data.Word
 import           Interval
 import           PhysMem
 
--- https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
-
--- The following types describe a very simplified ELF file that is
--- only used to get the boot loader to load the right memory at the
--- right position.
+-- A simplified ELF writer.
+--
+-- Epoxy is loaded as ELF file that is only there to get memory to
+-- where it needs to be in physical memory and let the boot loader
+-- know where to find the kernel's entry point. So we only support a
+-- tiny subset of the ELF format [1].
+--
+-- As an input we get a Memory structure that describes what regions
+-- of physical memory are populated. Each populated region becomes one
+-- segment in the ELF. Each segment needs a PHDR and all of the PHDRs
+-- are pointed to by the file header (EHDR) of the ELF file.
+--
+-- The structure of the ELF file we are creating thus looks like this:
+--
+-- Offset
+-- 0            +----------------------------+
+--              | EHDR                       |
+--              |  points to PHDRs below     |
+-- ehdrSize     +----------------------------+
+--              | PHDR 0                     |
+--              |  points to segment0        |
+--              |  initialized data          |
+--              +----------------------------+
+--              | PHDR 1                     |
+--              |  points to segment1        |
+--              |  initialized data          |
+--              +----------------------------+
+--              | ... more PHDRs ...         |
+-- beHeaderSize +----------------------------+
+--              | Segment 0 initialized data |
+--              +----------------------------+
+--              | Segment 1 initialized data |
+--              +----------------------------+
+--              | ... more segment data ...  |
+--              +----------------------------+
+--
+-- [1] https://en.wikipedia.org/wiki/Executable_and_Linkable_Format
 
 data BootArchitecture = RiscV64
 
