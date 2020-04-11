@@ -16,6 +16,11 @@ import           PhysMem
 
 data BootArchitecture = RiscV64
 
+data BootClass = Class32 | Class64
+
+bootClass :: BootArchitecture -> BootClass
+bootClass RiscV64 = Class64
+
 data BootSegment = BootSegment
   { bsPhys :: Word64,
     bsData :: B.ByteString }
@@ -44,22 +49,24 @@ bsMemSize :: BootSegment -> Word64
 bsMemSize = fromIntegral . B.length . bsData
 
 -- Header sizes
---
--- TODO: Support 32-bit ELFs.
 
-ehdrLen :: Int
-ehdrLen = 0x40
+ehdrLen :: BootClass -> Int
+ehdrLen Class64 = 0x40
+ehdrLen Class32 = 0x34
 
-phdrLen :: Int
-phdrLen = 0x38
+phdrLen :: BootClass -> Int
+phdrLen Class64 = 0x38
+phdrLen Class32 = 0x20
 
-shdrLen :: Int
-shdrLen = 0x40
+shdrLen :: BootClass -> Int
+shdrLen Class64 = 0x40
+shdrLen Class32 = 0x28
 
 -- The offset at which the segment data is serialized into the
 -- resulting ELF. This is right after all headers.
 beHeaderSize :: BootElf -> Word64
-beHeaderSize elf = fromIntegral $ ehdrLen + (phdrLen * length (beSegments elf))
+beHeaderSize elf = fromIntegral $ ehdrLen c + (phdrLen c * length (beSegments elf))
+  where c = bootClass $ beArch elf
 
 -- These are low-level representations of the program and segment
 -- headers for the ELF file we want to generate.
@@ -80,10 +87,11 @@ typeExec :: Word16
 typeExec = 0x02
 
 data Ehdr = Ehdr
-  { ehdrEntryPoint :: Word64,
+  { ehdrClass      :: BootClass,
     ehdrData       :: Word8,
     ehdrMachine    :: Word16,
-    ehdrPhdrCount  :: Word16 }
+    ehdrPhdrCount  :: Word16,
+    ehdrEntryPoint :: Word64 }
 
 data Phdr = Phdr
   { phdrFileOffset :: Word64,
@@ -113,18 +121,28 @@ segmentDataOffsets elf = (+ beHeaderSize elf) <$> cumulativeOffsets lengths
 toPhdr :: Word64 -> BootSegment -> Phdr
 toPhdr offset segment = Phdr offset (bsPhys segment) (bsPhys segment) (bsFileSize segment) (bsMemSize segment)
 
+elfClass :: BootArchitecture -> Word16
+elfClass RiscV64 = 0x00F3
+
 toSerializedElf :: BootElf -> SerializedElf
 toSerializedElf elf = SerializedElf ehdr phdrs bytes
   where
-    ehdr = Ehdr (beEntryPoint elf) dataLittleEndian machineRiscV (fromIntegral (length $ beSegments elf))
+    ehdr = Ehdr (bootClass (beArch elf)) dataLittleEndian (elfClass (beArch elf)) (fromIntegral (length $ beSegments elf)) (beEntryPoint elf)
     phdrs = uncurry toPhdr <$> zip (segmentDataOffsets elf) (beSegments elf)
     bytes = B.concat $ bsFileData <$> beSegments elf
+
+putWordNative :: BootClass -> Word64 -> Put
+putWordNative Class32 = putWord32le . fromIntegral
+putWordNative Class64 = putWord64le
 
 serializeEhdr :: Ehdr -> Put
 serializeEhdr ehdr = do
   putWord32be 0x7F454c46        -- Magic
 
-  putWord8 class64Bit
+  putWord8 (case c of
+              Class32 -> 1
+              Class64 -> 2)
+
   putWord8 dataLittleEndian
   putWord8 1                    -- Version
   putWord8 0                    -- System-V ABI
@@ -137,18 +155,20 @@ serializeEhdr ehdr = do
   putWord16le $ ehdrMachine ehdr
   putWord32le 1                 -- Version
 
-  putWord64le (ehdrEntryPoint ehdr)
+  putWordNative c (ehdrEntryPoint ehdr)
+  putWordNative c (fromIntegral $ ehdrLen c) -- Start of Phdrs
+  putWordNative c 0   -- Start of Shdrs (we have none)
 
-  putWord64le (fromIntegral ehdrLen) -- Start of Phdrs
-  putWord64le 0                 -- Start of Shdrs (we have none)
   putWord32le 0                 -- Flags
-  putWord16le (fromIntegral ehdrLen)
-  putWord16le (fromIntegral phdrLen)
+  putWord16le (fromIntegral $ ehdrLen c)
+  putWord16le (fromIntegral $ phdrLen c)
   putWord16le (ehdrPhdrCount ehdr)
-  putWord16le (fromIntegral shdrLen)
+  putWord16le (fromIntegral $ shdrLen c)
   putWord16le 0                 -- Shdr count
   putWord16le 0                 -- Stridx
+  where c = ehdrClass ehdr
 
+-- TODO Fix this for 32-bit.
 serializePhdr :: Phdr -> Put
 serializePhdr phdr = do
   putWord32le 1                 -- PT_LOAD
