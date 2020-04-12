@@ -87,6 +87,7 @@ in { system, compiler, flags, pkgs, hsPkgs, pkgconfPkgs, ... }:
         "epoxy-harden-test" = {
           depends = [
             (hsPkgs."base" or (buildDepError "base"))
+            (hsPkgs."elf" or (buildDepError "elf"))
             (hsPkgs."epoxy-harden" or (buildDepError "epoxy-harden"))
             (hsPkgs."hspec" or (buildDepError "hspec"))
             (hsPkgs."QuickCheck" or (buildDepError "QuickCheck"))
