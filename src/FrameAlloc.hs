@@ -4,12 +4,13 @@
 module FrameAlloc where
 
 import           Data.Bits
+import           Data.Int  (Int64)
 import           Data.List (find)
 import           Interval  as I
 
-type Frame = Integer
-type Page = Integer
-type ByteInterval = Interval Integer
+type Frame = Int64
+type Page = Int64
+type ByteInterval = Interval Int64
 type FrameInterval = Interval Frame
 type PageInterval = Interval Page
 
@@ -21,34 +22,34 @@ frameOrder = 12
 pageOrder :: Int
 pageOrder = frameOrder
 
-frameSize :: Integer
+frameSize :: Int64
 frameSize = shiftL 1 frameOrder
 
-pageSize :: Integer
+pageSize :: Int64
 pageSize = frameSize
 
-frameToPhys :: Frame -> Integer
+frameToPhys :: Frame -> Int64
 frameToPhys f = shiftL f frameOrder
 
-pageToVirt :: Page -> Integer
+pageToVirt :: Page -> Int64
 pageToVirt = frameToPhys
 
-physToFrameDown :: Integer -> Frame
+physToFrameDown :: Int64 -> Frame
 physToFrameDown b = shiftR b frameOrder
 
-physToFrameUp :: Integer -> Frame
+physToFrameUp :: Int64 -> Frame
 physToFrameUp b = physToFrameDown (b + frameSize - 1)
 
-virtToPageDown :: Integer -> Page
+virtToPageDown :: Int64 -> Page
 virtToPageDown = physToFrameDown
 
-virtToPageUp :: Integer -> Page
+virtToPageUp :: Int64 -> Page
 virtToPageUp = physToFrameUp
 
-isPageAligned :: Integer -> Bool
+isPageAligned :: Int64 -> Bool
 isPageAligned v = mod v pageSize == 0
 
-findInterval :: Integer -> FrameIntervalSet -> Maybe FrameInterval
+findInterval :: Int64 -> FrameIntervalSet -> Maybe FrameInterval
 findInterval ivlSize set = toSizedChunk <$> find ((>= ivlSize) . I.size) set
   where toSizedChunk (Interval from _) = I.fromSize from ivlSize
 
@@ -59,7 +60,7 @@ reserveFrameIntervals :: [FrameInterval] -> FrameIntervalSet -> FrameIntervalSet
 reserveFrameIntervals ivls set = foldr reserveFrameInterval set ivls
 
 -- TODO This needs a more complicated version where we allow users to allocate memory in the lower 32-bit.
-allocateFrames :: Integer -> FrameIntervalSet -> (Maybe Frame, FrameIntervalSet)
+allocateFrames :: Int64 -> FrameIntervalSet -> (Maybe Frame, FrameIntervalSet)
 allocateFrames ivlSize set =  case findInterval ivlSize set of
                                 Just ivl -> (Just (fromIvl ivl), reserveFrameInterval ivl set)
                                 Nothing  -> (Nothing,  set)

@@ -7,10 +7,9 @@ import qualified Data.ByteString            as B
 import qualified Data.ByteString.Lazy       as BL
 import qualified Data.ByteString.Lazy.Char8 as B8
 import           Data.Elf
+import           Data.Int                   (Int64)
 import           Data.List
 import           Data.Maybe
-import           Data.Word
-import           Dhall                      (Natural)
 
 import           AddressSpace
 import           ApplicationDescription
@@ -48,7 +47,7 @@ writeAddressSpace = mapM_ writeChunk
 allocateAddressSpace :: AddressSpace -> State Epoxy AddressSpace
 allocateAddressSpace = mapM allocateChunk
   where allocateChunk (AddressSpaceChunk v (Anywhere s) p) = do
-          let pages = virtToPageUp (toInteger (B.length s))
+          let pages = virtToPageUp (fromIntegral (B.length s))
           frame <- allocateFramesM pages
           return (AddressSpaceChunk v (Preloaded frame s) p)
         allocateChunk c = return c
@@ -65,28 +64,28 @@ loadKernelElf :: Elf -> State Epoxy AddressSpace
 loadKernelElf kernelElf = allocateAddressSpace $ elfToAddressSpace kernelElf noPermissions
 
 -- Return a simplified list of symbols. Only includes with names.
-getSymbolList :: Elf -> [(String, Word64)]
+getSymbolList :: Elf -> [(String, Int64)]
 getSymbolList elf = map simplify symbolsWithName
-  where simplify symbol = (B8.unpack (BL.fromStrict (fromJust (snd (steName symbol)))), steValue symbol)
+  where simplify symbol = (B8.unpack (BL.fromStrict (fromJust (snd (steName symbol)))), fromIntegral $ steValue symbol)
         symbolsWithName = filter hasName (concat (parseSymbolTables elf))
         hasName symbol = isJust (snd (steName symbol))
 
-symbolToVirt :: String -> Elf -> Word64
+symbolToVirt :: String -> Elf -> Int64
 symbolToVirt name elf = case find hasName (getSymbolList elf) of
   Just (_, vAddr) -> vAddr
   _               -> error ("No symbol: " ++ show name)
   where hasName (n, _) = n == name
 
-patchWord64 :: Integer -> Word64 -> State Epoxy ()
-patchWord64 phys val =
-  writeMemoryM phys (runPut (putWord64le val))
+patchInt64 :: Int64 -> Int64 -> State Epoxy ()
+patchInt64 phys val =
+  writeMemoryM phys (runPut (putInt64le val))
 
 patchPt :: Elf -> AddressSpace -> String -> Frame -> Int -> State Epoxy ()
 patchPt elf as sym ptFrame idx =
-  patchWord64 (fromIntegral (fromIntegral idx * 8 + symPhys)) (pteFrameToSATP ptFrame)
+  patchInt64 (fromIntegral (fromIntegral idx * 8 + symPhys)) (pteFrameToSATP ptFrame)
   where symPhys = fromJust $ lookupPhys as $ fromIntegral $ symbolToVirt sym elf
 
-mmapToAsChunk :: Natural -> MemoryMapEntry -> PermissionSet -> AddressSpaceChunk
+mmapToAsChunk :: Int64 -> MemoryMapEntry -> PermissionSet -> AddressSpaceChunk
 mmapToAsChunk v (MemoryMapEntry base len _) = AddressSpaceChunk
   (virtToPageDown $ fromIntegral v)
   (Fixed
@@ -101,7 +100,7 @@ descToAddressSpace mDesc kernelAs asDesc = infuseKernel kernelAs $ concatMap cre
     createAs ELF{binary=b} = elfToAddressSpace b userPermissions
     createAs SharedMemory{ApplicationDescription.key=k, vaDestination=v}
       | isPageAligned (fromIntegral v) = case maybeMem of
-                                           Just m -> [mmapToAsChunk v m rwuPermissions]
+                                           Just m -> [mmapToAsChunk (fromIntegral v) m rwuPermissions]
                                            _ -> error "Failed to find shared memory region"
       | otherwise = error "Shared memory region is not page aligned"
       where maybeMem = findMemoryWithKey mDesc k

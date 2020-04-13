@@ -29,7 +29,7 @@ spec =
     it "creates an empty ELF from empty memory" $
       null $ elfSegments $ parseElf $ bootElfFromMemory 0 []
     it "sets the entry point" $
-      property $ \entry -> (elfEntry $ parseElf $ bootElfFromMemory entry []) `shouldBe` entry
+      property $ \entry -> (elfEntry $ parseElf $ bootElfFromMemory entry []) `shouldBe` fromIntegral entry
     it "creates one segment per chunk of memory" $
       length (elfSegments $ parseElf $ bootElfFromMemory 0 exampleMemory) == 2
     it "stores segment data (1)" $

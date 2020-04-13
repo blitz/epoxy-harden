@@ -6,9 +6,10 @@ module PhysMem (MemoryChunk(..),
                 flatten) where
 
 import qualified Data.ByteString.Lazy as BL
+import           Data.Int             (Int64)
 import           Data.List
+import           Data.Word            (Word8)
 import           FrameAlloc
-import           GHC.Word             (Word8)
 import           Interval
 
 data MemoryChunk = MemoryChunk
@@ -18,10 +19,10 @@ data MemoryChunk = MemoryChunk
 
 type Memory = [MemoryChunk]
 
-sameByte :: Integer -> Word8 -> BL.ByteString
-sameByte len = BL.replicate (fromInteger len)
+sameByte :: Int64 -> Word8 -> BL.ByteString
+sameByte = BL.replicate
 
-writeMemory :: Integer -> BL.ByteString -> Memory -> Memory
+writeMemory :: Int64 -> BL.ByteString -> Memory -> Memory
 writeMemory _ mData mem | BL.length mData == 0 = mem
 writeMemory pos mData mem = MemoryChunk (fromSize pos (fromIntegral (BL.length mData))) mData : mem
 
@@ -30,10 +31,10 @@ readMemory bIvl [] = sameByte (size bIvl) 0
 readMemory bIvl@(Interval bIvlFrom bIvlTo) (MemoryChunk mIvl@(Interval mIvlFrom _) mData : rest)
   | intersects bIvl mIvl && offset >= 0 =
       readMemory (Interval bIvlFrom mIvlFrom) rest
-      <> BL.take (fromInteger (size available)) mData
+      <> BL.take (size available) mData
       <> readMemory (Interval availTo bIvlTo) rest
   | intersects bIvl mIvl && offset < 0 =
-    BL.take (fromInteger (size available)) (BL.drop (fromInteger (- offset)) mData)
+    BL.take (size available) (BL.drop (- offset) mData)
     <> readMemory (Interval availTo bIvlTo) rest
   | otherwise = readMemory bIvl rest
   where available@(Interval _ availTo) = intersection bIvl mIvl

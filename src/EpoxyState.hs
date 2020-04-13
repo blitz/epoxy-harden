@@ -4,6 +4,7 @@ module EpoxyState where
 import           Control.Lens             as LS
 import           Control.Monad.State.Lazy
 import qualified Data.ByteString.Lazy     as BL
+import           Data.Int                 (Int64)
 
 import           FrameAlloc
 import           PhysMem
@@ -15,9 +16,9 @@ data Epoxy = Epoxy
     deriving (Show)
 makeLenses ''Epoxy
 
-allocateFramesM :: Integer -> State Epoxy Frame
+allocateFramesM :: Int64 -> State Epoxy Frame
 allocateFramesM ivlsize =
   zoom allocator (state (allocateFrames ivlsize) >>= maybe (error "Failed to allocate frames") return)
 
-writeMemoryM :: Integer -> BL.ByteString -> State Epoxy ()
+writeMemoryM :: Int64 -> BL.ByteString -> State Epoxy ()
 writeMemoryM addr = zoom memory . modify . writeMemory addr

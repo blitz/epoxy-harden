@@ -2,6 +2,7 @@ module PhysMemSpec (spec) where
 
 import qualified Data.ByteString.Lazy       as BL
 import qualified Data.ByteString.Lazy.Char8 as B8
+import           Data.Int                   (Int64)
 import           Test.Hspec
 import           Test.QuickCheck
 import           Test.QuickCheck.Instances  ()
@@ -9,19 +10,16 @@ import           Test.QuickCheck.Instances  ()
 import qualified Interval                   as I
 import           PhysMem
 
-instance Arbitrary a => Arbitrary (I.Interval a) where
-  arbitrary = I.Interval <$> arbitrary <*> arbitrary
-
-readWriteMemory :: Integer -> BL.ByteString -> Memory -> BL.ByteString
+readWriteMemory :: Int64 -> BL.ByteString -> Memory -> BL.ByteString
 readWriteMemory start string =
   readMemory ivl . writeMemory start string
-  where ivl = I.fromSize start (toInteger (BL.length string))
+  where ivl = I.fromSize start (fromIntegral (BL.length string))
 
 spec :: Spec
 spec = do
   describe "readMemory" $ do
     it "reads empty memory as zeros" $
-      property $ \ivl -> readMemory ivl [] `shouldBe` sameByte (I.size ivl) 0
+      readMemory (I.fromSize 10 30) [] `shouldBe` sameByte 30 0
     it "reads partial memory chunks" $
       readMemory (I.fromSize 1 1) (writeMemory 0 (B8.pack "Bar") []) `shouldBe` B8.pack "a"
     it "reads partially written memory" $

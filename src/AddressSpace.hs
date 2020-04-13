@@ -2,6 +2,7 @@ module AddressSpace where
 
 import qualified Data.ByteString as B
 import           Data.Elf
+import           Data.Int        (Int64)
 import           Data.Maybe
 import           Data.Set        (Set)
 import qualified Data.Set        as Set
@@ -39,7 +40,7 @@ fromElfSegmentFlags = Set.fromList . mapMaybe elfSegmentFlagToPermission
 
 data BackingStore = Preloaded Frame B.ByteString
     | Anywhere B.ByteString
-    | Fixed Frame Int
+    | Fixed Frame Int64
     deriving (Show)
 
 data AddressSpaceChunk = AddressSpaceChunk
@@ -56,23 +57,23 @@ backingStoreFrame (Preloaded f _) = f
 backingStoreFrame (Fixed f _) = f
 backingStoreFrame _ = error "Cannot resolve physical address in unallocated space"
 
-backingStoreLength :: BackingStore -> Int
-backingStoreLength (Preloaded _ d) = B.length d
-backingStoreLength (Anywhere d)    = B.length d
-backingStoreLength (Fixed _ pages) = pages * fromInteger pageSize
+backingStoreLength :: BackingStore -> Int64
+backingStoreLength (Preloaded _ d) = fromIntegral $ B.length d
+backingStoreLength (Anywhere d)    = fromIntegral $ B.length d
+backingStoreLength (Fixed _ pages) = pages * pageSize
 
 pageInterval :: AddressSpaceChunk -> PageInterval
 pageInterval chunk = fromSize (virtStart chunk) (virtToPageUp
-                                                 (toInteger (backingStoreLength (backingStore chunk))))
+                                                 (backingStoreLength (backingStore chunk)))
 
-zeroExtend :: B.ByteString -> Integer -> B.ByteString
+zeroExtend :: B.ByteString -> Int64 -> B.ByteString
 zeroExtend bytes len
-  | diff >= 0 = bytes <> B.replicate (fromInteger diff) 0
+  | diff >= 0 = bytes <> B.replicate (fromIntegral diff) 0
   | otherwise = error "zeroExtend asked to shrink vector"
   where diff = len - fromIntegral (B.length bytes)
 
 segmentData :: ElfSegment -> B.ByteString
-segmentData seg = zeroExtend (elfSegmentData seg) (toInteger (elfSegmentMemSize seg))
+segmentData seg = zeroExtend (elfSegmentData seg) (fromIntegral (elfSegmentMemSize seg))
 
 elfToAddressSpace :: Elf -> PermissionSet -> AddressSpace
 elfToAddressSpace elf defaultPerm =
@@ -86,22 +87,22 @@ elfToAddressSpace elf defaultPerm =
           permissions = Set.union defaultPerm (fromElfSegmentFlags (elfSegmentFlags seg))}
       | otherwise = error "Segment is not page aligned"
       where
-        v = toInteger (elfSegmentVirtAddr seg)
-        p = toInteger (elfSegmentPhysAddr seg)
+        v = fromIntegral $ elfSegmentVirtAddr seg
+        p = fromIntegral $ elfSegmentPhysAddr seg
 
 -- Add kernel mappings to a user space address space.
 infuseKernel :: AddressSpace -> AddressSpace -> AddressSpace
 infuseKernel kernelAs userAs = kernelAs ++ userAs
 
-lookupPhysChunk :: AddressSpaceChunk -> Integer -> Maybe Integer
+lookupPhysChunk :: AddressSpaceChunk -> Int64 -> Maybe Int64
 lookupPhysChunk chunk virtAddr
-  | isInside (pageInterval chunk) page = Just $ (frameToPhys chunkFrame) + virtAddr - (pageToVirt page)
+  | isInside (pageInterval chunk) page = Just $ frameToPhys chunkFrame + virtAddr - pageToVirt page
   | otherwise = Nothing
   where page = virtToPageDown virtAddr
         chunkFrame = backingStoreFrame $ backingStore chunk
 
 -- Lookup a physical address from a virtual one.
-lookupPhys :: AddressSpace -> Integer -> Maybe Integer
+lookupPhys :: AddressSpace -> Int64 -> Maybe Int64
 lookupPhys [] virtAddr = Nothing
 lookupPhys (head:rest) virtAddr = case lookupPhysChunk head virtAddr of
   r@(Just _) -> r

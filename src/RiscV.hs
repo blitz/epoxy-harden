@@ -2,9 +2,9 @@ module RiscV where
 
 import qualified AddressSpace as AS
 import           Data.Bits
+import           Data.Int     (Int64)
 import           Data.Set     (Set)
 import qualified Data.Set     as Set
-import           Data.Word
 
 import           FrameAlloc   (Frame)
 
@@ -22,10 +22,10 @@ data PteProperty = Valid
 -- probably makes performance worse.
 type PteProperties = Set PteProperty
 
-ptePropToWord :: PteProperty -> Word64
+ptePropToWord :: PteProperty -> Int64
 ptePropToWord = shiftL 1 . fromEnum
 
-ptePropsToWord :: PteProperties -> Word64
+ptePropsToWord :: PteProperties -> Int64
 ptePropsToWord = foldl (.|.) 0 . map ptePropToWord . Set.toList
 
 toPteProp :: AS.Permission -> PteProperty
@@ -37,17 +37,17 @@ toPteProp AS.User    = User
 toPteProps :: AS.PermissionSet -> PteProperties
 toPteProps = Set.map toPteProp
 
-makeLeafPte :: Word64 -> AS.PermissionSet -> Word64
+makeLeafPte :: Int64 -> AS.PermissionSet -> Int64
 makeLeafPte physAddr perm = shiftR physAddr 2 .|. ptePropsToWord props
   where props = Set.union (toPteProps perm) defaultProps
         defaultProps = Set.fromList [Valid, Accessed, Dirty]
 
-makeNonLeafPte :: Word64 -> Word64
+makeNonLeafPte :: Int64 -> Int64
 makeNonLeafPte physAddr = shiftR physAddr 2 .|. ptePropToWord Valid
 
-pteFrame :: Word64 -> Frame
+pteFrame :: Int64 -> Frame
 pteFrame f = fromIntegral $ shiftR f 10
 
 -- TODO Hardcoded RISC-V Sv39 and no ASIDs
-pteFrameToSATP :: Frame -> Word64
-pteFrameToSATP ptRoot = fromInteger ptRoot .|. shiftL 8 60
+pteFrameToSATP :: Frame -> Int64
+pteFrameToSATP ptRoot = ptRoot .|. shiftL 8 60

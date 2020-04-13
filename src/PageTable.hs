@@ -6,9 +6,9 @@ import           Control.Monad.State.Lazy
 import           Data.Binary.Put
 import           Data.Bits
 
+import           Data.Int
 import           Data.List
 import           Data.Tree
-import           Data.Word
 
 import           AddressSpace
 import           EpoxyState
@@ -20,12 +20,12 @@ import qualified RiscV                    as R5
 -- Once we have constructed all page tables, we can check for identical subtrees
 -- across several address spaces and avoid duplicating backing storage for them.
 
-type PageTable = Tree Word64
+type PageTable = Tree Int64
 
 entries :: PageTable -> [PageTable]
 entries = subForest
 
-entry :: PageTable -> Word64
+entry :: PageTable -> Int64
 entry = rootLabel
 
 newtype BitSelector = BitSelector (Int, Int)
@@ -40,29 +40,29 @@ addressBits level
   | level == 0 = BitSelector (27, 18)
   | otherwise = error "Page table level is out of bounds"
 
-getBits :: BitSelector -> Word64 -> Word64
+getBits :: BitSelector -> Int64 -> Int64
 getBits (BitSelector (top, bottom)) w = shiftR w bottom .&. (shiftL 1 top - 1)
 
-putBits :: BitSelector -> Word64 -> Word64
+putBits :: BitSelector -> Int64 -> Int64
 putBits (BitSelector (_, bottom)) w = shiftL w bottom
 
 -- Mask virtual address bits in page numbers that are not used in page translation.
-maskUnused :: Word64 -> Word64
+maskUnused :: Int64 -> Int64
 maskUnused w = w .&. (shiftL 1 27 - 1)
 
-mappingToPtEntryL :: Word64 -> Integer -> Integer -> PermissionSet -> PageTable
+mappingToPtEntryL :: Int64 -> Int64 -> Int64 -> PermissionSet -> PageTable
 mappingToPtEntryL virt vStart pStart perm = Node val []
   where val = R5.makeLeafPte vStartAddr perm
-        vStartAddr = shiftL ((fromInteger pStart) + virt - (maskUnused (fromInteger vStart))) frameOrder
+        vStartAddr = shiftL (pStart + virt - maskUnused vStart) frameOrder
 
-mappingToPtEntry :: Word64 -> AddressSpaceChunk -> PageTable
+mappingToPtEntry :: Int64 -> AddressSpaceChunk -> PageTable
 mappingToPtEntry virt (AddressSpaceChunk vStart (Preloaded pStart _) perm) =
   mappingToPtEntryL virt vStart pStart perm
 mappingToPtEntry virt (AddressSpaceChunk vStart (Fixed pStart _) perm) =
   mappingToPtEntryL virt vStart pStart perm
 mappingToPtEntry _ _ = error "Can only map preloaded mappings"
 
-allocateLevel :: AddressSpace -> Int -> Word64 -> PageTable
+allocateLevel :: AddressSpace -> Int -> Int64 -> PageTable
 allocateLevel as level fromAddress =
   Node 0 [ptEntry (fromIntegral i) | i <- [0..pageTableEntries-1]]
   where ptEntry i
@@ -79,7 +79,7 @@ allocateLevel as level fromAddress =
           | not (null m) = mappingToPtEntry (fromIvl (entryInterval i)) (head m)
           | otherwise = Node 0 []
         sel = addressBits level
-        matchingMappings i = [c | c <- as, intersects (entryInterval i) (maskUnused . fromInteger <$> pageInterval c)]
+        matchingMappings i = [c | c <- as, intersects (entryInterval i) (maskUnused <$> pageInterval c)]
         -- The virtual address interval covered by page table entry i
         entryInterval i = fromSize (fromAddress + putBits sel i) (putBits sel 1)
 
@@ -88,21 +88,21 @@ constructPageTable as = allocateLevel as 0 0
 
 -- TODO Linear search is not efficient, but we only have a handful of page
 -- tables for now.
-type PageTableMap = [(PageTable, Word64)]
+type PageTableMap = [(PageTable, Int64)]
 type DedupState a = StateT PageTableMap (State Epoxy) a
 
 -- The un-memoized version of realizeOnePageTable with open recursion.
-realizeOnePageTable :: (PageTable -> DedupState Word64) -> PageTable -> DedupState Word64
+realizeOnePageTable :: (PageTable -> DedupState Int64) -> PageTable -> DedupState Int64
 realizeOnePageTable _ (Node w []) = return w
 realizeOnePageTable recurse (Node w l) = do
   ptData <- wordListToString <$> mapM recurse l
   ptFrame <- lift (allocateFramesM 1)
-  lift (writeMemoryM (frameToPhys (toInteger ptFrame)) ptData)
+  lift (writeMemoryM (frameToPhys ptFrame) ptData)
   return $ R5.makeNonLeafPte $ fromIntegral $ shiftL ptFrame frameOrder
-  where wordListToString wl = runPut (mapM_ putWord64le wl)
+  where wordListToString wl = runPut (mapM_ putInt64le wl)
 
 -- Recursively realize a page table with memoization.
-realizePageTable :: PageTable -> DedupState Word64
+realizePageTable :: PageTable -> DedupState Int64
 realizePageTable pt = do
   m <- get
   maybe recurse return (snd <$> find ((==) pt . fst) m)

@@ -51,7 +51,7 @@ renderExpression (Identifier name) = name
 renderExpression (UnsignedInteger i) = showT i
 renderExpression (AddressOf expr)  = "&(" `T.append` renderExpression expr `T.append` ")"
 renderExpression (InitializerList l) = "{" `T.append` T.intercalate "," (map renderExpression l) `T.append` "}"
-renderExpression (String s) = T.concat ["\"", (T.replace "\"" "\\\"" s), "\""]
+renderExpression (String s) = T.concat ["\"", T.replace "\"" "\\\"" s, "\""]
 
 -- Render the common part of a variable definition or declaration,
 -- e.g. int foo[].
