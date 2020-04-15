@@ -29,12 +29,17 @@ data GenericAddressSpaceDescElem elf = ELF
     , vaDestination :: Natural
     , permissions   :: SharedMemoryPermissions
     }
-    deriving (Generic, Show)
+  deriving (Generic, Show)
 
 instance FromDhall elf => FromDhall (GenericAddressSpaceDescElem elf)
 
 type AddressSpaceDescElem = GenericAddressSpaceDescElem Elf
 type AddressSpaceDesc = [AddressSpaceDescElem]
+
+data ThreadStack = Auto | Fixed { vaInitStackPtr :: Natural }
+  deriving (Generic, Show)
+
+instance FromDhall ThreadStack
 
 -- The appliation description is generic for different kernel object
 -- reference types, because we get it first with textual references
@@ -50,6 +55,7 @@ data GenericKObjectImpl ref elf = Exit
     }
     | Thread
     { process :: ref
+    , stack   :: ThreadStack
     }
     deriving (Generic, Show)
 
@@ -87,7 +93,7 @@ asElfMapM f ApplicationDescription{kobjects=k} = do
     implMap f Process{pid=p, addressSpace=a, capabilities=c} = do
       mappedAs <- asMap f a
       return $ Process p mappedAs c
-    implMap f Thread{process=p} = return $ Thread p
+    implMap f Thread{process=p, stack=s} = return $ Thread p s
 
     asMap :: (a -> IO b) -> [GenericAddressSpaceDescElem a] -> IO [GenericAddressSpaceDescElem b]
     asMap = mapM . asElemMap
@@ -110,7 +116,7 @@ asRefMap f ApplicationDescription{kobjects=k} = ApplicationDescription (kobjMap 
     implMap f Exit = Exit
     implMap f KLog{prefix=p} = KLog p
     implMap f Process{pid=p, addressSpace=a, capabilities=c} = Process p a (f <$> c)
-    implMap f Thread{process=p} = Thread $ f p
+    implMap f Thread{process=p, stack=s} = Thread (f p) s
 
 -- Types as we get them from Dhall
 type InputKObjectImpl = GenericKObjectImpl Text Text
