@@ -10,9 +10,10 @@ import           Data.Elf
 import           Data.Int                   (Int64)
 import           Data.List
 import           Data.Maybe
+import           Dhall                      (Natural)
 
 import           AddressSpace
-import           ApplicationDescription
+import qualified ApplicationDescription     as AD
 import           ElfWriter
 import           EpoxyState
 import           FrameAlloc
@@ -92,23 +93,34 @@ mmapToAsChunk v (MemoryMapEntry base len _) = AddressSpaceChunk
     (physToFrameDown $ fromIntegral base)
     (fromIntegral $ physToFrameUp $ fromIntegral len))
 
+toPermSet :: AD.SharedMemoryPermissions -> PermissionSet
+toPermSet AD.R  = permSetFromList [ AddressSpace.User, AddressSpace.Read ]
+toPermSet AD.RW = permSetFromList [ AddressSpace.User, AddressSpace.Read, AddressSpace.Write ]
+toPermSet AD.RX = permSetFromList [ AddressSpace.User, AddressSpace.Read, AddressSpace.Execute ]
+
+sharedMemToAs :: MachineDescription -> Natural -> PermissionSet -> AD.SharedMemorySource -> AddressSpaceChunk
+sharedMemToAs mDesc virt perm (AD.AnonymousMemory size)
+  = AddressSpaceChunk (fromIntegral virt) (Anywhere (B.replicate (fromIntegral size) 0)) perm
+sharedMemToAs mDesc virt perm (AD.NamedSharedMemory key)
+  = case maybeMem of
+      Just m -> mmapToAsChunk (fromIntegral virt) m perm
+      _      -> error "Failed to find shared memory region"
+  where maybeMem = findMemoryWithKey mDesc key
+
 -- Creates complete address spaces from a address space description.
-descToAddressSpace :: MachineDescription -> AddressSpace -> AddressSpaceDesc -> AddressSpace
+descToAddressSpace :: MachineDescription -> AddressSpace -> AD.AddressSpaceDesc -> AddressSpace
 descToAddressSpace mDesc kernelAs asDesc = infuseKernel kernelAs $ concatMap createAs asDesc
   where
-    createAs :: AddressSpaceDescElem -> AddressSpace
-    createAs ELF{binary=b} = elfToAddressSpace b userPermissions
-    createAs SharedMemory{ApplicationDescription.key=k, vaDestination=v}
-      | isPageAligned (fromIntegral v) = case maybeMem of
-                                           Just m -> [mmapToAsChunk (fromIntegral v) m rwuPermissions]
-                                           _ -> error "Failed to find shared memory region"
+    createAs :: AD.AddressSpaceDescElem -> AddressSpace
+    createAs AD.ELF{AD.binary=b} = elfToAddressSpace b userPermissions
+    createAs AD.SharedMemory{AD.source=s, AD.vaDestination=v, AD.permissions=perm}
+      | isPageAligned (fromIntegral v) = [sharedMemToAs mDesc v (toPermSet perm) s]
       | otherwise = error "Shared memory region is not page aligned"
-      where maybeMem = findMemoryWithKey mDesc k
 
-generateBootImage :: MachineDescription -> Elf -> ApplicationDescription -> B.ByteString
+generateBootImage :: MachineDescription -> Elf -> AD.ApplicationDescription -> B.ByteString
 generateBootImage mDesc kernelElf appDesc = evalFromInitial $ do
   kernelAs <- loadKernelElf kernelElf
-  userAss <- mapM (loadUserAs kernelAs) $ processes appDesc
+  userAss <- mapM (loadUserAs kernelAs) $ AD.processes appDesc
   pts <- realizePageTables (map constructPageTable (kernelAs:userAss))
   -- Patch boot page table pointer
   patchPt kernelElf kernelAs "BOOT_SATP" (head pts) 0
@@ -118,7 +130,7 @@ generateBootImage mDesc kernelElf appDesc = evalFromInitial $ do
   maybe (error "Invalid entry point into kernel")
     (\x -> bootElfFromMemory (fromIntegral x) <$> gets _memory) maybePhysEntry
   where
-    loadUserAs kernelAs = realizeAddressSpace . descToAddressSpace mDesc kernelAs . processAddressSpace
+    loadUserAs kernelAs = realizeAddressSpace . descToAddressSpace mDesc kernelAs . AD.processAddressSpace
     evalFromInitial m = evalState m initialEpoxy
     initialEpoxy = Epoxy { _allocator = initialFreeMemory,
                            _memory = [] }

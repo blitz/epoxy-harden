@@ -18,6 +18,9 @@ data Permission = Read
 
 type PermissionSet = Set Permission
 
+permSetFromList :: [Permission] -> PermissionSet
+permSetFromList = Set.fromList
+
 noPermissions :: PermissionSet
 noPermissions = Set.empty
 

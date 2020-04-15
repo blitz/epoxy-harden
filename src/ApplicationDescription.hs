@@ -10,14 +10,24 @@ import qualified Data.Text       as T
 import           Dhall
 import           ElfReader
 
--- TODO SharedMemory regions are missing configurable permissions. It
--- should be possible to have read-only mappings.
+data SharedMemorySource = NamedSharedMemory { sharedMemKey :: Text }
+                        | AnonymousMemory { sharedMemSize :: Natural }
+  deriving (Generic, Show)
+
+instance FromDhall SharedMemorySource
+
+data SharedMemoryPermissions = R | RW | RX
+    deriving (Generic, Show)
+
+instance FromDhall SharedMemoryPermissions
+
 data GenericAddressSpaceDescElem elf = ELF
     { binary :: elf
     }
     | SharedMemory
-    { key           :: Text
+    { source        :: SharedMemorySource
     , vaDestination :: Natural
+    , permissions   :: SharedMemoryPermissions
     }
     deriving (Generic, Show)
 
@@ -86,7 +96,7 @@ asElfMapM f ApplicationDescription{kobjects=k} = do
     asElemMap f ELF{binary=b} = do
       mappedElf <- f b
       return $ ELF mappedElf
-    asElemMap f SharedMemory{key=k, vaDestination=v} = return $ SharedMemory k v
+    asElemMap f SharedMemory{source=s, vaDestination=v, permissions=p} = return $ SharedMemory s v p
 
 -- Map over all references in the application description. This will
 -- be used to transform textual KObject references into global IDs.
@@ -126,6 +136,8 @@ gidNameToNaturalMappings a = Map.fromList $ zip (allGids a) [0..]
 normalizeAppDesc :: InputApplicationDescription -> IO ApplicationDescription
 normalizeAppDesc a = asElfMapM (parseElfFile . T.unpack) globalGidAppDesc
   where
+    -- TODO Print which ID didn't exist before we die, if Map.!
+    -- failed.
     globalGidAppDesc = asRefMap ((Map.!) gidMap) a
     gidMap = gidNameToNaturalMappings a
 
