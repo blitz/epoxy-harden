@@ -24,7 +24,7 @@ mapGroupedBy groupFn mapFn input = concatMap (\k -> mapFn $ filter ((== k) . gro
 
 -- Return the stack pointer for the nth thread.
 stackEndFromId :: Int -> Natural
-stackEndFromId n = (fromIntegral n * (stackSize + stackGuardSize)) + stackSize
+stackEndFromId n = stackAreaStart + (fromIntegral n * (stackSize + stackGuardSize)) + stackSize
 
 stackEnds :: [Natural]
 stackEnds = stackEndFromId <$> [0..]
