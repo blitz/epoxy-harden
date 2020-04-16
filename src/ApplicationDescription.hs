@@ -82,27 +82,31 @@ type ApplicationDescription = GenericApplicationDescription Natural Elf
 
 -- Accessor functions
 
-processes :: ApplicationDescription -> [KObject]
+isProcess :: GenericKObject r e -> Bool
+isProcess KObject{impl=Process{}} = True
+isProcess _                       = False
+
+isThread :: GenericKObject r e -> Bool
+isThread KObject{impl=Thread{}} = True
+isThread _                      = False
+
+processes :: GenericApplicationDescription r e -> [GenericKObject r e]
 processes a = sortOn processPid $ filter isProcess (kobjects a)
-  where isProcess KObject{impl=Process{}} = True
-        isProcess _                       = False
-        processPid KObject{impl=Process{pid=p}} = p
+  where processPid KObject{impl=Process{pid=p}} = p
         processPid _                            = error "Not a process"
 
-threads :: ApplicationDescription -> [KObject]
+threads :: GenericApplicationDescription r e -> [GenericKObject r e]
 threads a = filter isThread (kobjects a)
-  where isThread KObject{impl=Thread{}} = True
-        isThread _                      = False
 
-processPid :: KObject -> Natural
+processPid :: GenericKObject r e -> Natural
 processPid KObject{impl=Process{pid=p}} = p
 processPid _                            = error "not a process"
 
-processCaps :: KObject -> [Natural]
+processCaps :: GenericKObject r e -> [r]
 processCaps KObject{impl=Process{capabilities=c}} = c
 processCaps _                                     = error "not a process"
 
-processAddressSpace :: KObject -> AddressSpaceDesc
+processAddressSpace :: GenericKObject r e -> [GenericAddressSpaceDescElem e]
 processAddressSpace KObject{impl=Process{addressSpace=a}} = a
 processAddressSpace _                                     = error "not a process"
 
