@@ -41,7 +41,7 @@ data ThreadStack = Auto | Fixed { vaInitStackPtr :: Natural }
 
 instance FromDhall ThreadStack
 
--- The appliation description is generic for different kernel object
+-- The application description is generic for different kernel object
 -- reference types, because we get it first with textual references
 -- and have to post-process it to use integers.
 data GenericKObjectImpl ref elf = Exit
