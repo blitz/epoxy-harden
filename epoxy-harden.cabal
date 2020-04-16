@@ -1,53 +1,72 @@
-name:                epoxy-harden
-version:             0.1.0.0
--- synopsis:
--- description:
-homepage:            https://github.com/blitzclone/epoxy-harden#readme
-license:             AGPL-3
-license-file:        LICENSE
-author:              Julian Stecklina
-maintainer:          js@alien8.de
-copyright:           Copyright (c) 2018 Julian Stecklina
-category:            Operating System
-build-type:          Simple
-cabal-version:       >=1.10
-extra-source-files:  README.md
+name:               epoxy-harden
+version:            0.1.0.0
+license:            AGPL-3
+license-file:       LICENSE
+copyright:          Copyright (c) 2018-2020 Julian Stecklina
+author:             Julian Stecklina
+maintainer:         js@alien8.de
+category:           Operating System
+homepage:           https://github.com/blitzclone/epoxy-harden#readme
+build-type:         Simple
+extra-source-files: README.md
+cabal-version:      >= 1.10
 
 library
-  hs-source-dirs:      src
-  default-language:    Haskell2010
-  ghc-options:         -fwarn-unused-imports
-  exposed-modules:     MachineDescription, ElfReader, ElfWriter, BootImage, CodeGen,
-                       ApplicationDescription, Interval, PhysMem, AddressSpace, StackAllocation
-  other-modules:       EpoxyState, PageTable, CppAst, RiscV, FrameAlloc
-  build-depends:       base >= 4.7 && < 5,
-                       containers,
-                       bytestring,
-                       scientific,
-                       mtl,
-                       lens,
-                       binary,
-                       elf,
-                       dhall,
-                       text
+  exposed-modules:  AddressSpace
+                    ApplicationDescription
+                    BootImage
+                    CodeGen
+                    ElfReader
+                    ElfWriter
+                    Interval
+                    MachineDescription
+                    PhysMem
+                    StackAllocation
+  other-modules:    CppAst
+                    EpoxyState
+                    FrameAlloc
+                    PageTable
+                    RiscV
+  hs-source-dirs:   src
+  build-depends:    base       >= 4.7 && < 5
+                  , binary
+                  , bytestring
+                  , containers
+                  , dhall
+                  , elf
+                  , lens
+                  , mtl
+                  , scientific
+                  , text
+  default-language: Haskell2010
+  ghc-options:      -fwarn-unused-imports
 
 executable epoxy-harden
-  hs-source-dirs:      app
-  main-is:             Main.hs
-  default-language:    Haskell2010
-  ghc-options:         -fwarn-unused-imports
-  build-depends:       base >= 4.7 && < 5,
-                       bytestring,
-                       optparse-applicative,
-                       filepath,
-                       epoxy-harden,
-                       text
+  main-is:          Main.hs
+  hs-source-dirs:   app
+  build-depends:    base                 >= 4.7 && < 5
+                  , bytestring
+                  , epoxy-harden
+                  , filepath
+                  , optparse-applicative
+                  , text
+  default-language: Haskell2010
+  ghc-options:      -fwarn-unused-imports
 
 test-suite epoxy-harden-test
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
-  main-is:             Spec.hs
-  other-modules:       PhysMemSpec, IntervalSpec, ElfWriterSpec, AddressSpaceSpec
-  build-depends:       base, elf, epoxy-harden, hspec, QuickCheck, quickcheck-instances, bytestring
-  ghc-options:         -fwarn-unused-imports
-  default-language:    Haskell2010
+  type:             exitcode-stdio-1.0
+  main-is:          Spec.hs
+  other-modules:    AddressSpaceSpec
+                    ElfWriterSpec
+                    IntervalSpec
+                    PhysMemSpec
+  hs-source-dirs:   test
+  build-depends:    base
+                  , QuickCheck
+                  , bytestring
+                  , elf
+                  , epoxy-harden
+                  , hspec
+                  , quickcheck-instances
+  default-language: Haskell2010
+  ghc-options:      -fwarn-unused-imports
