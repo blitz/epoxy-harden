@@ -1,13 +1,13 @@
 module Main where
 
-import qualified Data.ByteString        as B
-import qualified Data.Text.IO           as T
+import qualified Data.ByteString              as B
+import qualified Data.Text.IO                 as T
 import qualified GHC.IO.Encoding
 import           Options.Applicative
 import           System.FilePath.Posix
 import qualified System.IO
 
-import           ApplicationDescription
+import           ApplicationDescriptionParser
 import           BootImage
 import           CodeGen
 import           ElfReader

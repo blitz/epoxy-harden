@@ -14,12 +14,14 @@ cabal-version:      >= 1.10
 library
   exposed-modules:  AddressSpace
                     ApplicationDescription
+                    ApplicationDescriptionParser
                     BootImage
                     CodeGen
                     ElfReader
                     ElfWriter
                     Interval
                     MachineDescription
+                    Normalization
                     PhysMem
                     StackAllocation
   other-modules:    CppAst
