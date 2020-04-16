@@ -8,10 +8,13 @@ pkgs.mkShell {
     # This can be replaced with pkgs.niv once nixpkgs is new enough.
     (import sources.niv {}).niv
 
+    # Build Tools (required for development)
     pkgs.stack
     pkgs.haskell-nix.nix-tools
-    # Broken :(
-     pkgs.stylish-haskell
+
+    # Linters and Formatters (optional)
+    pkgs.stylish-haskell
+    pkgs.stylish-cabal
     pkgs.hlint
   ];
 }
