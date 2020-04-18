@@ -70,7 +70,7 @@ kobjInit _ pr@Process{pid=pid, capabilities=c} =
 kobjInit entryPoints Thread{process=gid,stack=Fixed{vaInitStackPtr=stackPtr}} =
   [ AddressOf $ Identifier (kobjNameFromGid gid)
   , UnsignedInteger $ lookupProcEntryPoint entryPoints gid
-  , UnsignedInteger $ stackPtr]
+  , UnsignedInteger stackPtr]
 kobjInit entryPoints Thread{process=gid,stack=Auto} = error "Stack allocation did not happen?"
 
 kobjDef :: [(Natural, Natural)] -> KObject -> CppStatement

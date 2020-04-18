@@ -110,6 +110,11 @@ processAddressSpace :: GenericKObject r e -> [GenericAddressSpaceDescElem e]
 processAddressSpace KObject{impl=Process{addressSpace=a}} = a
 processAddressSpace _                                     = error "not a process"
 
+transformProcessAddressSpace :: GenericKObject r e -> ([GenericAddressSpaceDescElem e] -> [GenericAddressSpaceDescElem e]) -> GenericKObject r e
+transformProcessAddressSpace KObject{gid = g, impl=Process{pid=p, addressSpace=a, capabilities=c}} f =
+  KObject g (Process p (f a) c)
+transformProcessAddressSpace _ _ = error "not a process"
+
 addressSpaceDescBinary :: [GenericAddressSpaceDescElem a] -> a
 addressSpaceDescBinary (ELF{binary=b}:_) = b
 addressSpaceDescBinary (_:rest)          = addressSpaceDescBinary rest
