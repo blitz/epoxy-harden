@@ -22,7 +22,7 @@ generateHpp :: ApplicationDescription -> CppProgram
 generateHpp app =
   [ Pragma "once"
   , Include "thread.hpp"
-  , FwdArrayDeclaration (Const (Pointer (Type "thread"))) "threads" (Exactly $ length $ processes app)
+  , FwdArrayDeclaration (Const (Pointer (Type "thread"))) "threads" (Exactly $ length $ threads app)
   ]
 
 sortByGid :: [KObject] -> [KObject]
