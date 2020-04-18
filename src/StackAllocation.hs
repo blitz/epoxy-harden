@@ -11,6 +11,9 @@ stackAreaStart = 0x20000000
 -- How much stack space do we allocate per stack.
 stackSize = 0x4000
 
+-- How much space we leave from the top of the stack when we start a thread.
+stackReservedSpace = 8
+
 -- How much space do we keep between stacks.
 stackGuardSize = 0x4000
 
@@ -30,7 +33,7 @@ stackStartFromId n = stackAreaStart + (fromIntegral n * (stackSize + stackGuardS
 
 -- Return the stack pointer for the nth thread.
 stackEndFromId :: Int -> Natural
-stackEndFromId n = stackSize + stackStartFromId n
+stackEndFromId n = stackSize - stackReservedSpace + stackStartFromId n
 
 stackStarts :: [Natural]
 stackStarts = stackStartFromId <$> [0..]
