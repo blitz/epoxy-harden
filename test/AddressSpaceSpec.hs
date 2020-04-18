@@ -1,10 +1,8 @@
 module AddressSpaceSpec (spec) where
 
-import qualified Data.ByteString           as B
+import qualified Data.ByteString as B
 import           Data.Elf
 import           Test.Hspec
-import           Test.QuickCheck
-import           Test.QuickCheck.Instances ()
 
 import           AddressSpace
 
@@ -16,8 +14,8 @@ expectedSegments = [ ElfSegment PT_LOAD [] 0x10000 0x10000 0x1000 (B.replicate 0
 
 spec :: Spec
 spec =
-  describe "bootElfFromMemory" $ do
-    it "creates an empty ELF from empty memory" $
+  describe "zeroPadToPage" $ do
+    it "pads misaligned segments with zeroes" $
       -- TODO If this check fails, the test keeps allocating memory
       -- while trying to print what's going wrong.
       zeroPadToPage <$> givenSegments `shouldBe` expectedSegments
