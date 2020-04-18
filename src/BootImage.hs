@@ -100,7 +100,7 @@ toPermSet AD.RX = permSetFromList [ AddressSpace.User, AddressSpace.Read, Addres
 
 sharedMemToAs :: MachineDescription -> Natural -> PermissionSet -> AD.SharedMemorySource -> AddressSpaceChunk
 sharedMemToAs mDesc virt perm (AD.AnonymousMemory size)
-  = AddressSpaceChunk (fromIntegral virt) (Anywhere (B.replicate (fromIntegral size) 0)) perm
+  = AddressSpaceChunk (virtToPageDown $ fromIntegral virt) (Anywhere (B.replicate (fromIntegral size) 0)) perm
 sharedMemToAs mDesc virt perm (AD.NamedSharedMemory key)
   = case maybeMem of
       Just m -> mmapToAsChunk (fromIntegral virt) m perm
