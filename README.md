@@ -41,17 +41,18 @@ cache:
 
 ## Overview
 
-The core idea of epoxy is to move as much complexity of the running
-system to build time and minimize mutable state at runtime. This is
-primarily achieved by specializing boot images for a specific target
-system and workload and statically allocating all data structures in
-the kernel. The kernel itself can use other properties of the target
+The core idea of epoxy is to move complexity of the running system to
+build time and minimize mutable state at runtime. This is primarily
+achieved by specializing boot images for a specific target system and
+workload and statically allocating all data structures in the
+kernel. The kernel itself can use other properties of the target
 system to further simplify the running image, but this is not in scope
 for this document.
 
 ![Epoxy Build Overview](doc/epoxy.svg)
 
 The tool receives the following inputs:
+
 - a system description,
 - a workload description,
 - the userspace binaries referenced in the workload description,

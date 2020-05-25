@@ -1,7 +1,10 @@
-resolver: lts-15.7
+resolver: lts-15.13
 
 packages:
 - .
+
+extra-deps:
+  - dhall-1.32.0
 
 nix:
   enable: true
