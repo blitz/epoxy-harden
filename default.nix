@@ -1,6 +1,6 @@
 { sources ? import ./nix/sources.nix
 , haskell-nix ? import sources.haskell-nix {}
-, nixpkgs ? haskell-nix.sources.nixpkgs-default
+, nixpkgs ? haskell-nix.sources.nixpkgs
 , pkgs ? import nixpkgs haskell-nix.nixpkgsArgs
 , lib ? pkgs.lib }:
 
