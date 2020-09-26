@@ -1,0 +1,10 @@
+cradle:
+  stack:
+    - path: "./src"
+      component: "epoxy-harden:lib"
+
+    - path: "./app/Main.hs"
+      component: "epoxy-harden:exe:epoxy-harden"
+
+    - path: "./test"
+      component: "epoxy-harden:test:epoxy-harden-test"

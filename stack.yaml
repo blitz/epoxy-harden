@@ -1,11 +1,11 @@
-resolver: lts-15.13
+resolver: lts-16.15
 
 packages:
 - .
 
-extra-deps:
-  - dhall-1.32.0
-
 nix:
   enable: true
   packages: [ zlib ]
+
+ghc-options:
+  "$everything": -haddock
