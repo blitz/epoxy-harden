@@ -16,13 +16,13 @@ release.epoxyHarden.shellFor {
   buildInputs = [
     # Build Tools (required for development)
     pkgs.niv
-    pkgs.stack
+    unstablePkgs.stack
     pkgs.haskell-nix.nix-tools.ghc884
 
     # Editor Integration (optional)
     #pkgs.haskellPackages.ghcide
     #pkgs.haskellPackages.hspec-discover
-    #unstablePkgs.haskellPackages.haskell-language-server
+    unstablePkgs.haskellPackages.haskell-language-server
 
     # Linters and Formatters (optional)
     pkgs.stylish-haskell
