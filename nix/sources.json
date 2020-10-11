@@ -10,17 +10,5 @@
         "type": "tarball",
         "url": "https://github.com/input-output-hk/haskell.nix/archive/33cd29ee330d34c8c99a9ce56fb3529b44cf3224.tar.gz",
         "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
-    },
-    "nixpkgs-unstable": {
-        "branch": "nixpkgs-unstable",
-        "description": "Nix Packages collection",
-        "homepage": null,
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "30e98a4fd67c71277ee95c58c8fd691b69a09183",
-        "sha256": "107f1iq96cs6j7pmwi8628j857jn5gxqfqcbgmw3s2xf6irjjgjw",
-        "type": "tarball",
-        "url": "https://github.com/nixos/nixpkgs/archive/30e98a4fd67c71277ee95c58c8fd691b69a09183.tar.gz",
-        "url_template": "https://github.com/<owner>/<repo>/archive/<rev>.tar.gz"
     }
 }

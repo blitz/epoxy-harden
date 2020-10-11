@@ -2,7 +2,6 @@
 , haskell-nix ? import sources.haskell-nix {}
 , nixpkgs ? haskell-nix.sources.nixpkgs
 , pkgs ? import nixpkgs haskell-nix.nixpkgsArgs
-, unstablePkgs ? import sources.nixpkgs-unstable {}
 }:
 let
   release =
@@ -16,16 +15,6 @@ release.epoxyHarden.shellFor {
   buildInputs = [
     # Build Tools (required for development)
     pkgs.niv
-    unstablePkgs.stack
-    pkgs.haskell-nix.nix-tools.ghc884
-
-    # Editor Integration (optional)
-    #pkgs.haskellPackages.ghcide
-    #pkgs.haskellPackages.hspec-discover
-    unstablePkgs.haskellPackages.haskell-language-server
-
-    # Linters and Formatters (optional)
-    pkgs.stylish-haskell
-    pkgs.stylish-cabal
+    pkgs.stack
   ];
 }
