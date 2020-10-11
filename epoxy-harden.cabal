@@ -23,8 +23,8 @@ library
                     Normalization
                     PhysMem
                     StackAllocation
-                    Writer
                     Util
+                    Writer
   other-modules:    CppAst
                     ElfWriter
                     EpoxyState
@@ -72,5 +72,6 @@ test-suite epoxy-harden-test
                   , epoxy-harden
                   , hspec
                   , quickcheck-instances
+  build-tool-depends:   hspec-discover:hspec-discover
   default-language: Haskell2010
   ghc-options:      -fwarn-unused-imports
