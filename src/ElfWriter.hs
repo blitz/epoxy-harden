@@ -68,7 +68,7 @@ data BootElf = BootElf
 toBootSegment :: MemoryChunk -> BootSegment
 toBootSegment chunk = BootSegment (fromIvl $ interval chunk) (BL.toStrict $ storage chunk)
 
-toBootElf :: BootArchitecture -> Int64 -> Memory -> BootElf
+toBootElf :: BootArchitecture -> Int64 -> [MemoryChunk] -> BootElf
 toBootElf arch entryPoint memory = BootElf arch entryPoint (toBootSegment <$> memory)
 
 -- TODO This is needlessly inefficient.

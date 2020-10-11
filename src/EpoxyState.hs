@@ -16,6 +16,9 @@ data Epoxy = Epoxy
     deriving (Show)
 makeLenses ''Epoxy
 
+initialEpoxy :: FrameIntervalSet -> Epoxy
+initialEpoxy freeFrames = Epoxy freeFrames emptyMemory
+
 allocateFramesM :: Int64 -> State Epoxy Frame
 allocateFramesM ivlsize =
   zoom allocator (state (allocateFrames ivlsize) >>= maybe (error "Failed to allocate frames") return)

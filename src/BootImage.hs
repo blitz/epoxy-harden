@@ -131,8 +131,6 @@ generateBootImage mDesc kernelElf appDesc outputFormat = evalFromInitial $ do
     (\x -> writeOutput (fromIntegral x) <$> gets _memory) maybePhysEntry
   where
     loadUserAs kernelAs = realizeAddressSpace . descToAddressSpace mDesc kernelAs . AD.processAddressSpace
-    evalFromInitial m = evalState m initialEpoxy
-    initialEpoxy = Epoxy { _allocator = initialFreeMemory,
-                           _memory = [] }
+    evalFromInitial m = evalState m $ initialEpoxy initialFreeMemory
     initialFreeMemory = toFreeFrames mDesc
     writeOutput = resolveWriterFunction outputFormat
