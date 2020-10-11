@@ -14,13 +14,13 @@ import           Dhall                      (Natural)
 
 import           AddressSpace
 import qualified ApplicationDescription     as AD
-import           ElfWriter
 import           EpoxyState
 import           FrameAlloc
 import           Interval
 import           MachineDescription
 import           PageTable
 import           RiscV
+import           Writer
 
 byteToFrameInterval :: ByteInterval -> FrameInterval
 byteToFrameInterval (Interval fromB toB) = Interval (physToFrameDown fromB) (physToFrameUp toB)
@@ -117,8 +117,8 @@ descToAddressSpace mDesc kernelAs asDesc = infuseKernel kernelAs $ concatMap cre
       | isPageAligned (fromIntegral v) = [sharedMemToAs mDesc v (toPermSet perm) s]
       | otherwise = error "Shared memory region is not page aligned"
 
-generateBootImage :: MachineDescription -> Elf -> AD.ApplicationDescription -> B.ByteString
-generateBootImage mDesc kernelElf appDesc = evalFromInitial $ do
+generateBootImage :: MachineDescription -> Elf -> AD.ApplicationDescription -> String -> B.ByteString
+generateBootImage mDesc kernelElf appDesc outputFormat = evalFromInitial $ do
   kernelAs <- loadKernelElf kernelElf
   userAss <- mapM (loadUserAs kernelAs) $ AD.processes appDesc
   pts <- realizePageTables (map constructPageTable (kernelAs:userAss))
@@ -128,10 +128,11 @@ generateBootImage mDesc kernelElf appDesc = evalFromInitial $ do
   -- Wrap our memory state into the boot image as ELF segments
   let maybePhysEntry = lookupPhys kernelAs $ fromIntegral $ elfEntry kernelElf
   maybe (error "Invalid entry point into kernel")
-    (\x -> bootElfFromMemory (fromIntegral x) <$> gets _memory) maybePhysEntry
+    (\x -> writeOutput (fromIntegral x) <$> gets _memory) maybePhysEntry
   where
     loadUserAs kernelAs = realizeAddressSpace . descToAddressSpace mDesc kernelAs . AD.processAddressSpace
     evalFromInitial m = evalState m initialEpoxy
     initialEpoxy = Epoxy { _allocator = initialFreeMemory,
                            _memory = [] }
     initialFreeMemory = toFreeFrames mDesc
+    writeOutput = resolveWriterFunction outputFormat

@@ -18,13 +18,14 @@ library
                     BootImage
                     CodeGen
                     ElfReader
-                    ElfWriter
                     Interval
                     MachineDescription
                     Normalization
                     PhysMem
                     StackAllocation
+                    Writer
   other-modules:    CppAst
+                    ElfWriter
                     EpoxyState
                     FrameAlloc
                     PageTable
