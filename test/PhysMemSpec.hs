@@ -9,6 +9,7 @@ import           Test.QuickCheck.Instances  ()
 
 import qualified Interval                   as I
 import           PhysMem
+import           Util                       (sameByte)
 
 readWriteMemory :: Int64 -> BL.ByteString -> Memory -> BL.ByteString
 readWriteMemory start string =
@@ -31,16 +32,16 @@ spec = do
       readMemory (I.fromSize 0 6) (writeMemory 3 (B8.pack "Bar") (writeMemory 0 (B8.pack "FooFob") [])) `shouldBe` B8.pack "FooBar"
   describe "writeMemory" $
     it "is inverse to readMemory" $ property $ \s x -> readWriteMemory s x [] == x
-  describe "flatten" $ do
+  describe "memoryToList" $ do
     it "doesn't change the content" $
       readMemory (I.fromSize 0 6) (writeMemory 0 (B8.pack "Foo")
                                    (writeMemory 3 (B8.pack "Bar") [])) `shouldBe` B8.pack "FooBar"
     it "joins two adjacent memory chunks" $
-      length (flatten (writeMemory 0 (B8.pack "Foo")
-                        (writeMemory 3 (B8.pack "Bar") []))) `shouldBe` 1
+      length (memoryToList (writeMemory 0 (B8.pack "Foo")
+                            (writeMemory 3 (B8.pack "Bar") []))) `shouldBe` 1
     it "does not join non-adjacent regions" $
-      length (flatten (writeMemory 0 (B8.pack "Foo")
-                        (writeMemory 4 (B8.pack "Bar") []))) `shouldBe` 2
+      length (memoryToList (writeMemory 0 (B8.pack "Foo")
+                            (writeMemory 4 (B8.pack "Bar") []))) `shouldBe` 2
     it "joins overlapping regions" $
-      length (flatten (writeMemory 0 (B8.pack "Foo")
-                        (writeMemory 2 (B8.pack "Bar") []))) `shouldBe` 1
+      length (memoryToList (writeMemory 0 (B8.pack "Foo")
+                            (writeMemory 2 (B8.pack "Bar") []))) `shouldBe` 1

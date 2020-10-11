@@ -3,12 +3,13 @@ module ElfWriterSpec (spec) where
 import qualified Data.ByteString           as B
 import qualified Data.ByteString.Lazy      as BL
 import           Data.Elf
+import           Data.Int                  (Int64)
 import           Test.Hspec
 import           Test.QuickCheck
 import           Test.QuickCheck.Instances ()
 
-import           ElfWriter
 import           PhysMem
+import           Writer
 
 segOneData :: BL.ByteString
 segOneData = BL.pack [0, 0, 0]
@@ -22,6 +23,9 @@ exampleMemory = writeMemory 10 segOneData (writeMemory 20 segTwoData [])
 allSegmentData :: ElfSegment -> B.ByteString
 allSegmentData seg = B.append segData (B.replicate (fromIntegral (elfSegmentMemSize seg) - B.length segData) 0)
   where segData = elfSegmentData seg
+
+bootElfFromMemory :: Int64 -> Memory -> B.ByteString
+bootElfFromMemory = resolveWriterFunction "ELF"
 
 spec :: Spec
 spec =

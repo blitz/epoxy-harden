@@ -232,4 +232,4 @@ putElf elf = runPut $ do
 
 writeElf :: Int64 -> Memory -> B.ByteString
 writeElf entryPoint
-  = BL.toStrict . putElf . serializeElf . toBootElf RiscV64 entryPoint . flatten
+  = BL.toStrict . putElf . serializeElf . toBootElf RiscV64 entryPoint . memoryToList

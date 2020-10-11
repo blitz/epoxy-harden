@@ -1,16 +1,15 @@
 module PhysMem (MemoryChunk(..),
                 Memory,
-                sameByte,
                 writeMemory,
                 readMemory,
-                flatten) where
+                memoryToList) where
 
 import qualified Data.ByteString.Lazy as BL
 import           Data.Int             (Int64)
 import           Data.List
-import           Data.Word            (Word8)
 import           FrameAlloc
 import           Interval
+import           Util                 (sameByte)
 
 data MemoryChunk = MemoryChunk
   { interval :: ByteInterval,
@@ -18,9 +17,6 @@ data MemoryChunk = MemoryChunk
   deriving (Show)
 
 type Memory = [MemoryChunk]
-
-sameByte :: Int64 -> Word8 -> BL.ByteString
-sameByte = BL.replicate
 
 writeMemory :: Int64 -> BL.ByteString -> Memory -> Memory
 writeMemory _ mData mem | BL.length mData == 0 = mem
@@ -40,8 +36,14 @@ readMemory bIvl@(Interval bIvlFrom bIvlTo) (MemoryChunk mIvl@(Interval mIvlFrom 
   where available@(Interval _ availTo) = intersection bIvl mIvl
         offset = mIvlFrom - bIvlFrom
 
+-- |Given a memory description simplify its internal description.
+--
+-- 'writeMemory' just appends new data to the head of the list
+-- representing the memory content. This function "garbage collects"
+-- the overwritten memory and makes the internal representation a
+-- simple list of non-overlapping memory chunks.
 flatten :: Memory -> Memory
-flatten m = map readIt (join sortedIvls)
+flatten m = map readIt $ join sortedIvls
   where getIvl (MemoryChunk ivl _) = ivl
         sortedIvls = sortOn fromIvl (getIvl <$> m)
         join (x:y:xs)
@@ -49,3 +51,7 @@ flatten m = map readIt (join sortedIvls)
           | otherwise = x : join (y:xs)
         join lst = lst
         readIt ivl = MemoryChunk ivl (readMemory ivl m)
+
+-- |Turn a memory description into a list of memory chunks.
+memoryToList :: Memory -> [MemoryChunk]
+memoryToList = flatten
