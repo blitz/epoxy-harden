@@ -26,7 +26,7 @@ library
                     Util
                     Writer
   other-modules:    CppAst
-                    ElfWriter
+                    Writer.Elf
                     EpoxyState
                     FrameAlloc
                     PageTable
@@ -58,20 +58,20 @@ executable epoxy-harden
   ghc-options:      -fwarn-unused-imports
 
 test-suite epoxy-harden-test
-  type:             exitcode-stdio-1.0
-  main-is:          Spec.hs
-  other-modules:    AddressSpaceSpec
-                    ElfWriterSpec
-                    IntervalSpec
-                    PhysMemSpec
-  hs-source-dirs:   test
-  build-depends:    base
-                  , QuickCheck
-                  , bytestring
-                  , elf
-                  , epoxy-harden
-                  , hspec
-                  , quickcheck-instances
-  build-tool-depends:   hspec-discover:hspec-discover
-  default-language: Haskell2010
-  ghc-options:      -fwarn-unused-imports
+  type:               exitcode-stdio-1.0
+  main-is:            Spec.hs
+  other-modules:      AddressSpaceSpec
+                      ElfWriterSpec
+                      IntervalSpec
+                      PhysMemSpec
+  hs-source-dirs:     test
+  build-depends:      base
+                    , QuickCheck
+                    , bytestring
+                    , elf
+                    , epoxy-harden
+                    , hspec
+                    , quickcheck-instances
+  default-language:   Haskell2010
+  build-tool-depends: hspec-discover:hspec-discover
+  ghc-options:        -fwarn-unused-imports
