@@ -1,6 +1,6 @@
 -- TODO This code is not particularly nice and also hardcodes RISC-V Sv39.
 
-module PageTable where
+module PageTable (constructPageTable, realizePageTables) where
 
 import           Control.Monad.State.Lazy
 import           Data.Binary.Put
@@ -83,6 +83,10 @@ allocateLevel as level fromAddress =
         -- The virtual address interval covered by page table entry i
         entryInterval i = fromSize (fromAddress + putBits sel i) (putBits sel 1)
 
+-- | Create page table structures for an address space.
+--
+-- All page tables that are created have to be realized with
+-- 'realizePageTables' later.
 constructPageTable :: AddressSpace -> PageTable
 constructPageTable as = allocateLevel as 0 0
 
@@ -111,7 +115,12 @@ realizePageTable pt = do
           modify ((:) (pt, result))
           return result
 
--- Realize a set of page tables and share as much of the page table structure as possible.
+-- |Realize a set of page tables by allocating physical memory for them.
+--
+-- An instance of 'PageTable' does not have backing store allocated
+-- for itself. This happens in the realization stage in this
+-- function. 'realizePageTables' takes a list of page tables to
+-- exploit opportunities to share page table structures.
 realizePageTables :: [PageTable] -> State Epoxy [Frame]
 realizePageTables pts = do
   ptes <- evalStateT (mapM realizePageTable pts) []
