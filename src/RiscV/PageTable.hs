@@ -22,12 +22,6 @@ import qualified RiscV                    as R5
 
 type PageTable = Tree Int64
 
-entries :: PageTable -> [PageTable]
-entries = subForest
-
-entry :: PageTable -> Int64
-entry = rootLabel
-
 newtype BitSelector = BitSelector (Int, Int)
 
 pageTableEntries :: Int
@@ -39,9 +33,6 @@ addressBits level
   | level == 1 = BitSelector (18, 9)
   | level == 0 = BitSelector (27, 18)
   | otherwise = error "Page table level is out of bounds"
-
-getBits :: BitSelector -> Int64 -> Int64
-getBits (BitSelector (top, bottom)) w = shiftR w bottom .&. (shiftL 1 top - 1)
 
 putBits :: BitSelector -> Int64 -> Int64
 putBits (BitSelector (_, bottom)) w = shiftL w bottom
