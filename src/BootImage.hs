@@ -19,7 +19,6 @@ import           FrameAlloc
 import           Interval
 import           MachineDescription
 import           PageTable
-import           RiscV
 import           Writer
 
 byteToFrameInterval :: ByteInterval -> FrameInterval
@@ -32,9 +31,6 @@ toFrameInterval e =
 toFreeFrames :: MachineDescription -> FrameIntervalSet
 toFreeFrames md =
   [toFrameInterval e | e <- memoryMap md, memoryType e == Available]
-
-elfLoadSegments :: Elf -> [ElfSegment]
-elfLoadSegments elf =  [seg | seg <- elfSegments elf, elfSegmentType seg == PT_LOAD]
 
 -- Writes each frame with backing store into memory.
 writeAddressSpace :: AddressSpace -> State Epoxy ()
@@ -81,9 +77,14 @@ patchInt64 :: Int64 -> Int64 -> State Epoxy ()
 patchInt64 phys val =
   writeMemoryM phys (runPut (putInt64le val))
 
-patchPt :: Elf -> AddressSpace -> String -> Frame -> Int -> State Epoxy ()
-patchPt elf as sym ptFrame idx =
-  patchInt64 (fromIntegral (fromIntegral idx * 8 + symPhys)) (pteFrameToSATP ptFrame)
+-- |Patch root patch table pointers at the given symbol.
+--
+-- Page table pointers are in an architecture-dependent format
+-- (i.e. valid SATP values on RISC-V), but are always stored as 64-bit
+-- integers.
+patchPt :: Elf -> AddressSpace -> String -> Int64 -> Int -> State Epoxy ()
+patchPt elf as sym pageTablePtr idx =
+  patchInt64 (fromIntegral (fromIntegral idx * 8 + symPhys)) pageTablePtr
   where symPhys = fromJust $ lookupPhys as $ fromIntegral $ symbolToVirt sym elf
 
 mmapToAsChunk :: Int64 -> MemoryMapEntry -> PermissionSet -> AddressSpaceChunk

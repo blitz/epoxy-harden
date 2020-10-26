@@ -16,6 +16,8 @@ data Epoxy = Epoxy
     deriving (Show)
 makeLenses ''Epoxy
 
+type EpoxyState = State Epoxy
+
 initialEpoxy :: FrameIntervalSet -> Epoxy
 initialEpoxy freeFrames = Epoxy freeFrames emptyMemory
 

@@ -1,11 +1,12 @@
 module AddressSpace where
 
-import qualified Data.ByteString as B
+import           Control.Exception (assert)
+import qualified Data.ByteString   as B
 import           Data.Elf
-import           Data.Int        (Int64)
+import           Data.Int          (Int64)
 import           Data.Maybe
-import           Data.Set        (Set)
-import qualified Data.Set        as Set
+import           Data.Set          (Set)
+import qualified Data.Set          as Set
 
 import           FrameAlloc
 import           Interval
@@ -66,8 +67,8 @@ backingStoreLength (Anywhere d)    = fromIntegral $ B.length d
 backingStoreLength (Fixed _ pages) = pages * pageSize
 
 pageInterval :: AddressSpaceChunk -> PageInterval
-pageInterval chunk = fromSize (virtStart chunk) (virtToPageUp
-                                                 (backingStoreLength (backingStore chunk)))
+pageInterval chunk = assert (virtStart chunk >= 0)
+  fromSize (virtStart chunk) $ virtToPageUp $ backingStoreLength $ backingStore chunk
 
 zeroes :: Int64 -> B.ByteString
 zeroes cnt = B.replicate (fromIntegral cnt) 0
@@ -129,7 +130,7 @@ lookupPhysChunk chunk virtAddr
 
 -- Lookup a physical address from a virtual one.
 lookupPhys :: AddressSpace -> Int64 -> Maybe Int64
-lookupPhys [] virtAddr = Nothing
+lookupPhys [] _ = Nothing
 lookupPhys (head:rest) virtAddr = case lookupPhysChunk head virtAddr of
   r@(Just _) -> r
   Nothing    -> lookupPhys rest virtAddr

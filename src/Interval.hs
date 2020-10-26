@@ -61,5 +61,10 @@ size a@(Interval from to)
   | isEmpty a = 0
   | otherwise = to - from
 
+-- |Tests whether a point is inside an interval.
 isInside :: (Ord a, Num a) => Interval a -> a -> Bool
 isInside ivl v = intersects ivl (fromSize v 1)
+
+-- |Tests whether one interval is completely covered by another one.
+isCovered :: (Ord a, Num a) => Interval a -> Interval a -> Bool
+isCovered coveringIvl coveredIvl = (intersection coveredIvl coveringIvl) == coveredIvl
