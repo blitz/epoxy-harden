@@ -47,7 +47,3 @@ makeNonLeafPte physAddr = shiftR physAddr 2 .|. ptePropToWord Valid
 
 pteFrame :: Int64 -> Frame
 pteFrame f = fromIntegral $ shiftR f 10
-
--- TODO Hardcoded RISC-V Sv39 and no ASIDs
-pteFrameToSATP :: Frame -> Int64
-pteFrameToSATP ptRoot = ptRoot .|. shiftL 8 60

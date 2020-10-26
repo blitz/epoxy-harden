@@ -48,3 +48,18 @@ spec = do
       I.subtract (I.Interval zero 10) (I.Interval 5 20) `shouldBe` [I.Interval 0 5]
     it "returns two results when the second interval is inside the first" $
       I.subtract (I.Interval zero 10) (I.Interval 5 6) `shouldBe` [I.Interval 0 5, I.Interval 6 10]
+  describe "isCovered" $ do
+    it "is false for disjount intervals" $
+      I.isCovered (I.Interval 20 30) (I.Interval zero 10) `shouldBe` False
+    it "is false for intersecting intervals" $
+      I.isCovered (I.Interval 5 15) (I.Interval zero 10) `shouldBe` False
+    it "is true for identical intervals" $
+      I.isCovered (I.Interval zero 10) (I.Interval zero 10)
+    it "is true for covered intervals" $
+      I.isCovered (I.Interval zero 10) (I.Interval 1 9)
+    it "is true for empty intervals" $
+      I.isCovered (I.Interval zero 10) (I.Interval zero zero) `shouldBe` True
+    it "is true for empty intervals that are inside empty intervals" $
+      I.isCovered (I.Interval zero zero) (I.Interval zero zero) `shouldBe` True
+    it "is false for non-empty intervals in empty ones" $
+      I.isCovered (I.Interval zero zero) (I.Interval zero 10) `shouldBe` False

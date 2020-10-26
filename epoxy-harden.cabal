@@ -29,7 +29,9 @@ library
                     Writer.Elf
                     EpoxyState
                     FrameAlloc
+                    GenericPageTable
                     PageTable
+                    PageTableFeatures
                     RiscV
                     RiscV.PageTable
   hs-source-dirs:   src
