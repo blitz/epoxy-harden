@@ -3,10 +3,24 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages: []
+packages:
+- completed:
+    cabal-file:
+      size: 1767
+      sha256: 7cf8b188acceeb9766acd6599625e54aedc2d2c355f7a0148e841e7a716f0ce2
+    name: dtb-parse
+    version: 0.0.1
+    git: https://github.com/blitz/dtb-parse.git
+    pantry-tree:
+      size: 1117
+      sha256: ed4bed727c85a57bc605665190ca03c0df2234f55f2a1795696d99473c479105
+    commit: fa3b24355c8b40e76a46668b8fbff3428921ae4c
+  original:
+    git: https://github.com/blitz/dtb-parse.git
+    commit: fa3b24355c8b40e76a46668b8fbff3428921ae4c
 snapshots:
 - completed:
-    size: 532380
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/16/15.yaml
-    sha256: 3b5f2a699aa5ed3abbc30410062bf743926f0868ce3eeb5655370c6c6cc1a9f4
-  original: lts-16.15
+    size: 533252
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/16/26.yaml
+    sha256: cdbc5db9c1afe80a5998247939027a0c7db92fa0f20b5cd01596ec3da628b622
+  original: lts-16.26

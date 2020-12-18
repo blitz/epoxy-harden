@@ -1,7 +1,11 @@
-resolver: lts-16.15
+resolver: lts-16.26
 
 packages:
 - .
+
+extra-deps:
+- git: https://github.com/blitz/dtb-parse.git
+  commit: fa3b24355c8b40e76a46668b8fbff3428921ae4c
 
 nix:
   enable: true
