@@ -13,11 +13,39 @@ packages:
     git: https://github.com/blitz/dtb-parse.git
     pantry-tree:
       size: 1117
-      sha256: ed4bed727c85a57bc605665190ca03c0df2234f55f2a1795696d99473c479105
-    commit: fa3b24355c8b40e76a46668b8fbff3428921ae4c
+      sha256: ea157e69ee798bc14b1bf98652ed5af913c00b205cb809036b6c933db8c704a1
+    commit: 7e691ceb9423468a4abc1531ff63155da48980e2
   original:
     git: https://github.com/blitz/dtb-parse.git
-    commit: fa3b24355c8b40e76a46668b8fbff3428921ae4c
+    commit: 7e691ceb9423468a4abc1531ff63155da48980e2
+- completed:
+    hackage: megaparsec-9.0.1@sha256:2244ab77521a52a0083966c5405b3151f149e1db50b1a5b104cd9b1e56617203,3248
+    pantry-tree:
+      size: 1447
+      sha256: 0e2df0d318e48e352b3d766c46cdabc3abb5dcc3dfcb062bdd0a8d44f34a975c
+  original:
+    hackage: megaparsec-9.0.1@sha256:2244ab77521a52a0083966c5405b3151f149e1db50b1a5b104cd9b1e56617203,3248
+- completed:
+    hackage: dhall-1.37.0@sha256:24d86af5cc027c48d30be15cab7cee427075b92da059ca8139a79e3d682c395a,34327
+    pantry-tree:
+      size: 305799
+      sha256: 2772be632099f8c778762758df89676b38fdd9ceedeb91bd44b3b0169e6b1d6f
+  original:
+    hackage: dhall-1.37.0@sha256:24d86af5cc027c48d30be15cab7cee427075b92da059ca8139a79e3d682c395a,34327
+- completed:
+    hackage: repline-0.4.0.0@sha256:3324479e497d27c40c3d4762bffc52058f9921621d20d2947dcf9a554b94cd0d,2253
+    pantry-tree:
+      size: 564
+      sha256: bff43f9a5b0a212c29c12e2e22b528d9071b2a7d13489ce5bdc54ae9eac853cf
+  original:
+    hackage: repline-0.4.0.0@sha256:3324479e497d27c40c3d4762bffc52058f9921621d20d2947dcf9a554b94cd0d,2253
+- completed:
+    hackage: haskeline-0.8.1.0@sha256:6a6158c90b929ce7aa5331ff5e9819aa32c7df8f4a7ba324b3cc055ee96b48cb,5818
+    pantry-tree:
+      size: 2955
+      sha256: b80332551d20389637851299b618679a8435531bed1fed905195ae7163526999
+  original:
+    hackage: haskeline-0.8.1.0@sha256:6a6158c90b929ce7aa5331ff5e9819aa32c7df8f4a7ba324b3cc055ee96b48cb,5818
 snapshots:
 - completed:
     size: 533252

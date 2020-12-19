@@ -5,7 +5,11 @@ packages:
 
 extra-deps:
 - git: https://github.com/blitz/dtb-parse.git
-  commit: fa3b24355c8b40e76a46668b8fbff3428921ae4c
+  commit: 7e691ceb9423468a4abc1531ff63155da48980e2
+- megaparsec-9.0.1@sha256:2244ab77521a52a0083966c5405b3151f149e1db50b1a5b104cd9b1e56617203,3248
+- dhall-1.37.0@sha256:24d86af5cc027c48d30be15cab7cee427075b92da059ca8139a79e3d682c395a,34327
+- repline-0.4.0.0@sha256:3324479e497d27c40c3d4762bffc52058f9921621d20d2947dcf9a554b94cd0d,2253
+- haskeline-0.8.1.0@sha256:6a6158c90b929ce7aa5331ff5e9819aa32c7df8f4a7ba324b3cc055ee96b48cb,5818
 
 nix:
   enable: true

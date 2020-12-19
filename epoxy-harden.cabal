@@ -33,11 +33,12 @@ library
                     RiscV
                     RiscV.PageTable
   hs-source-dirs:   src
-  build-depends:    base       >= 4.7 && < 5
+  build-depends:    base
                   , binary
                   , bytestring
                   , containers
                   , dhall
+                  , dtb-parse
                   , elf
                   , lens
                   , mtl
@@ -49,7 +50,19 @@ library
 executable epoxy-harden
   main-is:          Main.hs
   hs-source-dirs:   app/harden
-  build-depends:    base                 >= 4.7 && < 5
+  build-depends:    base
+                  , bytestring
+                  , epoxy-harden
+                  , filepath
+                  , optparse-applicative
+                  , text
+  default-language: Haskell2010
+  ghc-options:      -fwarn-unused-imports
+
+executable epoxy-dtb
+  main-is:          Main.hs
+  hs-source-dirs:   app/dtb
+  build-depends:    base
                   , bytestring
                   , epoxy-harden
                   , filepath
