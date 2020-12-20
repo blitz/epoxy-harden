@@ -51,8 +51,8 @@ library
   ghc-options:      -fwarn-unused-imports
 
 executable epoxy-harden
-  main-is:          Main.hs
-  hs-source-dirs:   app/harden
+  main-is:          EpoxyHarden.hs
+  hs-source-dirs:   app
   build-depends:    base
                   , bytestring
                   , epoxy-harden
@@ -63,8 +63,8 @@ executable epoxy-harden
   ghc-options:      -fwarn-unused-imports
 
 executable epoxy-dtb
-  main-is:          Main.hs
-  hs-source-dirs:   app/dtb
+  main-is:          EpoxyDtb.hs
+  hs-source-dirs:   app
   build-depends:    base
                   , bytestring
                   , epoxy-harden
