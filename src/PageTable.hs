@@ -1,6 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
---module PageTable (constructPageTable, realizePageTables) where
-module PageTable where
+module PageTable (constructPageTable, realizePageTables) where
 
 import           Control.Exception (assert)
 import           Data.Bits
