@@ -1,4 +1,4 @@
-module Writer.Elf (write) where
+module Writer.Elf (write, BootArchitecture(..)) where
 
 import           Control.Monad        (when)
 import           Data.Binary.Put
@@ -230,6 +230,6 @@ putElf elf = runPut $ do
   mapM_ putPhdr $ selfPhdrs elf
   putByteString $ selfData elf
 
-write :: Int64 -> Memory -> B.ByteString
-write entryPoint
-  = BL.toStrict . putElf . serializeElf . toBootElf RiscV64 entryPoint . memoryToList
+write :: BootArchitecture -> Int64 -> Memory -> B.ByteString
+write arch entryPoint
+  = BL.toStrict . putElf . serializeElf . toBootElf arch entryPoint . memoryToList
