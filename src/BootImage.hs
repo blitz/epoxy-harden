@@ -135,3 +135,4 @@ generateBootImage mDesc kernelElf appDesc outputFormat = evalFromInitial $ do
     evalFromInitial m = evalState m $ initialEpoxy initialFreeMemory
     initialFreeMemory = toFreeFrames mDesc
     writeOutput = resolveWriterFunction outputFormat
+    (constructPageTable, realizePageTables) = resolvePageTableFunction "riscv-sv39"

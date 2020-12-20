@@ -1,10 +1,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
-module PageTable (constructPageTable, realizePageTables) where
+module PageTable (resolvePageTableFunction) where
 
 import           Control.Exception (assert)
 import           Data.Bits
 
 import           AddressSpace
+import           Data.List         (find, intercalate)
 import           EpoxyState
 import           FrameAlloc
 import           GenericPageTable  (GenericLeaf (..), GenericPageTable (..))
@@ -98,24 +99,24 @@ toPageTable cfg as = assert (case pt of
                      pt
   where pt = pageTableLevel cfg as (negate 1) 0
 
--- TODO We need to implement support for different formats here. We
--- also need to re-implement page table deduplication code.
---
--- Page table deduplication could be implemented by adding a new monad
--- that allocates backing store with predefined content.
+type ConstructFunction = AddressSpace -> GenericPageTable
+type RealizeFunction = [GenericPageTable] -> EpoxyState [Frame]
 
--- |Create page table structures for an address space.
---
--- All page tables that are created have to be realized with
--- 'realizePageTablesNew' later.
-constructPageTable :: AddressSpace -> GenericPageTable
-constructPageTable = toPageTable $ R5.pageTableFeatures R5.Sv39
+-- TODO Page table deduplication could be implemented by adding a new
+-- monad that allocates backing store with predefined content.
 
--- |Realize a set of page tables by allocating physical memory for them.
---
--- An instance of 'GenericPageTable' does not have backing store
--- allocated for itself. This happens in the realization stage in this
--- function. 'realizePageTablesNew' takes a list of page tables to
--- exploit opportunities to share page table structures.
-realizePageTables :: [GenericPageTable] -> EpoxyState [Frame]
-realizePageTables = mapM $ R5.realizePageTable R5.Sv39
+pageTableFormats :: [(String, ConstructFunction, RealizeFunction)]
+pageTableFormats = [
+  ("riscv-sv39", toPageTable $ R5.pageTableFeatures R5.Sv39, mapM $ R5.realizePageTable R5.Sv39)
+  ]
+
+supportedPageTableFormats :: [String]
+supportedPageTableFormats = (\(n, _, _) -> n) <$> pageTableFormats
+
+-- | Return functions to construct and realize page tables of a given
+-- type.
+resolvePageTableFunction :: String -> (ConstructFunction, RealizeFunction)
+resolvePageTableFunction format =
+  case find ((== format) . (\(n, _, _) -> n)) pageTableFormats of
+      Just (_, constructFn, realizeFn) -> (constructFn, realizeFn)
+      Nothing -> error ("Unsupported page table format. We support: " ++ (intercalate ", " supportedPageTableFormats))
