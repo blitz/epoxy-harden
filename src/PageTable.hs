@@ -110,7 +110,7 @@ toPageTable cfg as = assert (case pt of
 -- All page tables that are created have to be realized with
 -- 'realizePageTablesNew' later.
 constructPageTable :: AddressSpace -> GenericPageTable
-constructPageTable = toPageTable R5.pageTableFeatures
+constructPageTable = toPageTable $ R5.pageTableFeatures R5.Sv39
 
 -- |Realize a set of page tables by allocating physical memory for them.
 --
@@ -119,4 +119,4 @@ constructPageTable = toPageTable R5.pageTableFeatures
 -- function. 'realizePageTablesNew' takes a list of page tables to
 -- exploit opportunities to share page table structures.
 realizePageTables :: [GenericPageTable] -> EpoxyState [Frame]
-realizePageTables = mapM R5.realizePageTable
+realizePageTables = mapM $ R5.realizePageTable R5.Sv39
