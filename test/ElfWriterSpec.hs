@@ -25,7 +25,7 @@ allSegmentData seg = B.append segData (B.replicate (fromIntegral (elfSegmentMemS
   where segData = elfSegmentData seg
 
 bootElfFromMemory :: Int64 -> Memory -> B.ByteString
-bootElfFromMemory = resolveWriterFunction "ELF"
+bootElfFromMemory = resolveWriterFunction "riscv-elf64"
 
 spec :: Spec
 spec =
