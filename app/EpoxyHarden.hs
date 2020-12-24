@@ -36,7 +36,7 @@ doBootImage args = do
   elf <- parseElfFile (kernelTemplateFile args)
   machineDesc <- parseMachineDescription $ bootMachFile args
   appDesc <- parseApplicationDescription (bootAppFile args)
-  B.writeFile (outputBootImage args) $ generateBootImage machineDesc elf appDesc (outputFormat args)
+  B.writeFile (outputBootImage args) $ generateBootImage $ BootImageConfig machineDesc appDesc elf (outputFormat args)
   putStrLn "Done!"
 
 doCodeGen :: CodeGenArguments -> IO ()

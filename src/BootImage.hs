@@ -1,4 +1,4 @@
-module BootImage ( generateBootImage ) where
+module BootImage ( BootImageConfig(BootImageConfig), generateBootImage ) where
 
 import           Control.Monad
 import           Control.Monad.State.Lazy
@@ -118,21 +118,31 @@ descToAddressSpace mDesc kernelAs asDesc = infuseKernel kernelAs $ concatMap cre
       | isPageAligned (fromIntegral v) = [sharedMemToAs mDesc v (toPermSet perm) s]
       | otherwise = error "Shared memory region is not page aligned"
 
-generateBootImage :: MachineDescription -> Elf -> AD.ApplicationDescription -> String -> B.ByteString
-generateBootImage mDesc kernelElf appDesc outputFormat = evalFromInitial $ do
-  kernelAs <- loadKernelElf kernelElf
-  userAss <- mapM (loadUserAs kernelAs) $ AD.processes appDesc
+-- | All data that is needed to create a boot image.
+data BootImageConfig = BootImageConfig
+  { machineDesc  :: MachineDescription
+  , appDesc      :: AD.ApplicationDescription
+  , kernelElf    :: Elf
+  -- | The output format that the boot image is written in. This is
+  -- typically some kind of ELF.
+  , outputFormat :: String
+  }
+
+generateBootImage :: BootImageConfig -> B.ByteString
+generateBootImage cfg = evalFromInitial $ do
+  kernelAs <- loadKernelElf $ kernelElf cfg
+  userAss <- mapM (loadUserAs kernelAs) $ AD.processes $ appDesc cfg
   pts <- realizePageTables (map constructPageTable (kernelAs:userAss))
   -- Patch boot page table pointer
-  patchPt kernelElf kernelAs "BOOT_SATP" (head pts) 0
-  zipWithM_ (patchPt kernelElf kernelAs "USER_SATPS") (tail pts) [0..]
+  patchPt (kernelElf cfg) kernelAs "BOOT_SATP" (head pts) 0
+  zipWithM_ (patchPt (kernelElf cfg) kernelAs "USER_SATPS") (tail pts) [0..]
   -- Wrap our memory state into the boot image as ELF segments
-  let maybePhysEntry = lookupPhys kernelAs $ fromIntegral $ elfEntry kernelElf
+  let maybePhysEntry = lookupPhys kernelAs $ fromIntegral $ elfEntry (kernelElf cfg)
   maybe (error "Invalid entry point into kernel")
     (\x -> writeOutput (fromIntegral x) <$> gets _memory) maybePhysEntry
   where
-    loadUserAs kernelAs = realizeAddressSpace . descToAddressSpace mDesc kernelAs . AD.processAddressSpace
+    loadUserAs kernelAs = realizeAddressSpace . descToAddressSpace (machineDesc cfg) kernelAs . AD.processAddressSpace
     evalFromInitial m = evalState m $ initialEpoxy initialFreeMemory
-    initialFreeMemory = toFreeFrames mDesc
-    writeOutput = resolveWriterFunction outputFormat
+    initialFreeMemory = toFreeFrames (machineDesc cfg)
+    writeOutput = resolveWriterFunction (outputFormat cfg)
     (constructPageTable, realizePageTables) = resolvePageTableFunction "riscv-sv39"
