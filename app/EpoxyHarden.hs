@@ -58,7 +58,7 @@ bootImageParser =
     <*> strOption (long "application" <> metavar "APPLICATION" <> help "The application description Dhall file")
     <*> strOption (long "kernel" <> metavar "KERNEL" <> help "The kernel ELF file")
     <*> strOption (long "output-format" <> metavar "FORMAT" <> help "The format used for the output file"
-                   <> value "ELF" <> showDefault)
+                   <> value "riscv-elf64" <> showDefault)
     <*> strOption (long "output" <> short 'o' <> metavar "OUTPUT" <> help "The output boot image")
 
 codegenParser :: Parser CodeGenArguments
