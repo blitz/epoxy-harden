@@ -15,6 +15,7 @@ import qualified System.IO
 data BootImageArguments = BootImageArguments
   { bootMachFile       :: FilePath,
     bootAppFile        :: FilePath,
+    targetArch         :: String,
     kernelTemplateFile :: FilePath,
     outputFormat       :: String,
     outputBootImage    :: FilePath
@@ -36,7 +37,9 @@ doBootImage args = do
   elf <- parseElfFile (kernelTemplateFile args)
   machineDesc <- parseMachineDescription $ bootMachFile args
   appDesc <- parseApplicationDescription (bootAppFile args)
-  B.writeFile (outputBootImage args) $ generateBootImage $ BootImageConfig machineDesc appDesc elf (outputFormat args)
+  let bootImage = generateBootImage $
+        BootImageConfig machineDesc appDesc (targetArch args) elf (outputFormat args)
+  B.writeFile (outputBootImage args) bootImage
   putStrLn "Done!"
 
 doCodeGen :: CodeGenArguments -> IO ()
@@ -56,6 +59,8 @@ bootImageParser =
   BootImageArguments
     <$> strOption (long "machine" <> metavar "MACHINE" <> help "The machine description Dhall file")
     <*> strOption (long "application" <> metavar "APPLICATION" <> help "The application description Dhall file")
+    <*> strOption (long "target-arch" <> metavar "ARCH" <> help "The target architecture"
+                  <> value "riscv-sv39" <> showDefault)
     <*> strOption (long "kernel" <> metavar "KERNEL" <> help "The kernel ELF file")
     <*> strOption (long "output-format" <> metavar "FORMAT" <> help "The format used for the output file"
                    <> value "riscv-elf64" <> showDefault)

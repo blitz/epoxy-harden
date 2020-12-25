@@ -122,6 +122,7 @@ descToAddressSpace mDesc kernelAs asDesc = infuseKernel kernelAs $ concatMap cre
 data BootImageConfig = BootImageConfig
   { machineDesc  :: MachineDescription
   , appDesc      :: AD.ApplicationDescription
+  , targetArch   :: String
   , kernelElf    :: Elf
   -- | The output format that the boot image is written in. This is
   -- typically some kind of ELF.
