@@ -146,4 +146,4 @@ generateBootImage cfg = evalFromInitial $ do
     evalFromInitial m = evalState m $ initialEpoxy initialFreeMemory
     initialFreeMemory = toFreeFrames (machineDesc cfg)
     writeOutput = resolveWriterFunction (outputFormat cfg)
-    (constructPageTable, realizePageTables) = resolvePageTableFunction "riscv-sv39"
+    (constructPageTable, realizePageTables) = resolvePageTableFunction $ targetArch cfg

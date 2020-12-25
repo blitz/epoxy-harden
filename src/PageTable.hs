@@ -107,6 +107,7 @@ type RealizeFunction = [GenericPageTable] -> EpoxyState [Frame]
 
 pageTableFormats :: [(String, ConstructFunction, RealizeFunction)]
 pageTableFormats = [
+  ("riscv-sv32", toPageTable $ R5.pageTableFeatures R5.Sv32, mapM $ R5.realizePageTable R5.Sv32),
   ("riscv-sv39", toPageTable $ R5.pageTableFeatures R5.Sv39, mapM $ R5.realizePageTable R5.Sv39)
   ]
 
