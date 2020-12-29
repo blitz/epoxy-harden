@@ -6,6 +6,7 @@ import           Data.Text              (Text)
 import qualified Data.Text              as T
 import           ElfReader
 import           Numeric.Natural
+import           System.FilePath.Posix  (joinPath)
 
 -- Map over all ELFs in the application description with
 -- side-effects. This will be used to transform ELF file names to
@@ -65,8 +66,8 @@ gidNameToNaturalMappings a = Map.fromList $ zip (allGids a) [0..]
 -- Normalize an application description by turning all textual
 -- references into numerical IDs and load all external resourceses
 -- (ELF binaries).
-normalizeApplicationDescription :: InputApplicationDescription -> IO ApplicationDescription
-normalizeApplicationDescription a = asElfMapM (parseElfFile . T.unpack) globalGidAppDesc
+normalizeApplicationDescription :: FilePath -> InputApplicationDescription -> IO ApplicationDescription
+normalizeApplicationDescription root a = asElfMapM (parseElfFile . (\f -> joinPath [root, f]) . T.unpack) globalGidAppDesc
   where
     -- TODO Print which ID didn't exist before we die, if Map.!
     -- failed.

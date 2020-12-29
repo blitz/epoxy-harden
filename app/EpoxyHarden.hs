@@ -18,14 +18,16 @@ data BootImageArguments = BootImageArguments
     targetArch         :: String,
     kernelTemplateFile :: FilePath,
     outputFormat       :: String,
-    outputBootImage    :: FilePath
+    outputBootImage    :: FilePath,
+    bootBinaryRoot     :: FilePath
   }
 
 data CodeGenArguments = CodeGenArguments
-  { codeGenMachFile :: FilePath,
-    codeGenAppFile  :: FilePath,
-    outHpp          :: FilePath,
-    outCpp          :: FilePath
+  { codeGenMachFile   :: FilePath,
+    codeGenAppFile    :: FilePath,
+    outHpp            :: FilePath,
+    outCpp            :: FilePath,
+    codeGenBinaryRoot :: FilePath
   }
 
 data Command
@@ -36,7 +38,7 @@ doBootImage :: BootImageArguments -> IO ()
 doBootImage args = do
   elf <- parseElfFile (kernelTemplateFile args)
   machineDesc <- parseMachineDescription $ bootMachFile args
-  appDesc <- parseApplicationDescription (bootAppFile args)
+  appDesc <- parseApplicationDescription (bootBinaryRoot args) (bootAppFile args)
   let bootImage = generateBootImage $
         BootImageConfig machineDesc appDesc (targetArch args) elf (outputFormat args)
   B.writeFile (outputBootImage args) bootImage
@@ -45,7 +47,7 @@ doBootImage args = do
 doCodeGen :: CodeGenArguments -> IO ()
 doCodeGen args = do
   machineDesc <- parseMachineDescription (codeGenMachFile args)
-  appDesc <- parseApplicationDescription (codeGenAppFile args)
+  appDesc <- parseApplicationDescription (codeGenBinaryRoot args) (codeGenAppFile args)
   let generated = generateCode machineDesc appDesc $ takeFileName $ outHpp args
   T.writeFile (outCpp args) (cppContent generated)
   T.writeFile (outHpp args) (hppContent generated)
@@ -65,6 +67,8 @@ bootImageParser =
     <*> strOption (long "output-format" <> metavar "FORMAT" <> help "The format used for the output file"
                    <> value "riscv-elf64" <> showDefault)
     <*> strOption (long "output" <> short 'o' <> metavar "OUTPUT" <> help "The output boot image")
+    <*> strOption (long "binary-root" <> metavar "ROOT" <> help "The directory relative to which user binaries are looked up"
+                  <> value "./" <> showDefault)
 
 codegenParser :: Parser CodeGenArguments
 codegenParser =
@@ -73,6 +77,8 @@ codegenParser =
     <*> strOption (long "application" <> metavar "APPLICATION" <> help "The application description Dhall file")
     <*> strOption (long "out-hpp" <> metavar "HPP" <> help "The generated kernel state header file")
     <*> strOption (long "out-cpp" <> metavar "CPP" <> help "The generated kernel state cpp file")
+    <*> strOption (long "binary-root" <> metavar "ROOT" <> help "The directory relative to which user binaries are looked up"
+                  <> value "./" <> showDefault)
 
 cmdParser :: Parser Command
 cmdParser =
